@@ -10,13 +10,10 @@ export default async function Page({ params }: { params: { id: string } }) {
   const id = params.id;
 
   const doc = await Listing.findById(id).lean().catch(() => null);
-  if (!doc) return <main className="p-6">No encontrado</main>;
+  if (!doc) return <main style={{ padding: 24 }}>No encontrado</main>;
 
   const images: string[] = Array.isArray(doc.images)
-    ? doc.images
-        .filter(Boolean)
-        .map((s: any) => String(s).trim())
-        .filter(Boolean)
+    ? doc.images.filter(Boolean).map((s: any) => String(s).trim()).filter(Boolean)
     : [];
 
   const priceFmt =
@@ -24,41 +21,47 @@ export default async function Page({ params }: { params: { id: string } }) {
       ? `ARS ${Number(doc.price).toLocaleString("es-AR")}`
       : `${doc.currency} ${Number(doc.price).toLocaleString("en-US")}`;
 
-  const wpText = encodeURIComponent(
-    `Hola, estoy interesado/a en la propiedad: ${doc.title}`
-  );
+  const wpText = encodeURIComponent(`Hola, estoy interesado/a en la propiedad: ${doc.title}`);
   const wpHref = `https://wa.me/?text=${wpText}`;
 
   return (
-    <main className="mx-auto max-w-5xl p-4 space-y-4">
-      <div>
-        <h1 className="text-2xl font-bold">{doc.title}</h1>
-        <div className="text-white/70">{doc.location}</div>
-        <div className="mt-2 text-xl font-bold">{priceFmt}</div>
-        <div className="text-sm text-white/80">
-          {String(doc.propertyType).toUpperCase()} •{" "}
-          {String(doc.operationType).toUpperCase()}
+    <main style={{ maxWidth: 1000, margin: "0 auto", padding: 16 }}>
+      <div style={{ marginBottom: 12 }}>
+        <h1 style={{ fontSize: 24, fontWeight: 700 }}>{doc.title}</h1>
+        <div style={{ opacity: 0.75 }}>{doc.location}</div>
+        <div style={{ marginTop: 8, fontSize: 20, fontWeight: 700 }}>{priceFmt}</div>
+        <div style={{ marginTop: 4, opacity: 0.85 }}>
+          {String(doc.propertyType).toUpperCase()} • {String(doc.operationType).toUpperCase()}
           {typeof doc.rooms === "number" ? ` • ${doc.rooms} amb` : ""}
         </div>
       </div>
 
-      {/* Galería SIEMPRE contenida */}
-      <div className="w-full max-w-5xl mx-auto">
+      {/* Galería controlada */}
+      <div style={{ width: "100%", maxWidth: 1000, margin: "0 auto" }}>
         <Gallery images={images} title={doc.title} />
       </div>
 
       {doc.description && (
-        <div className="whitespace-pre-wrap text-white/90">
+        <div style={{ marginTop: 16, whiteSpace: "pre-wrap", opacity: 0.95 }}>
           {doc.description}
         </div>
       )}
 
-      <div className="p-4 rounded-xl bg-white/5 border border-white/10">
-        <div className="font-semibold mb-2">Contacto</div>
+      <div style={{ marginTop: 16, padding: 16, borderRadius: 12, border: "1px solid rgba(255,255,255,.1)", background: "rgba(255,255,255,.05)" }}>
+        <div style={{ fontWeight: 600, marginBottom: 8 }}>Contacto</div>
         <a
           href={wpHref}
           target="_blank"
-          className="block text-center px-4 py-2 rounded bg-green-600 hover:bg-green-700 font-semibold"
+          style={{
+            display: "block",
+            textAlign: "center",
+            padding: "10px 16px",
+            borderRadius: 10,
+            background: "#16a34a",
+            color: "#fff",
+            fontWeight: 700,
+            textDecoration: "none",
+          }}
         >
           WhatsApp
         </a>

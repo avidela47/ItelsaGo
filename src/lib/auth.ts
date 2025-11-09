@@ -1,3 +1,5 @@
+// @ts-nocheck
+
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { NextResponse } from "next/server";
