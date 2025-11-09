@@ -1,0 +1,10 @@
+<svg width="360" height="120" viewBox="0 0 360 120" xmlns="http://www.w3.org/2000/svg">
+  <rect width="360" height="120" fill="none"/>
+  <text x="10" y="70" font-family="Arial, sans-serif" font-size="64" font-weight="700" fill="#FFFFFF">ITELSA</text>
+  <!-- Green circle -->
+  <circle cx="270" cy="75" r="34" fill="#1E7971"/>
+  <!-- GO text -->
+  <text x="245" y="85" font-family="Arial, sans-serif" font-size="32" font-weight="700" fill="#FFFFFF">GO</text>
+  <!-- Arrow -->
+  <path d="M 295 60 L 315 75 L 295 90" stroke="#FFFFFF" stroke-width="8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
