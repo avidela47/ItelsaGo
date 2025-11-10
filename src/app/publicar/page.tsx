@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, forwardRef } from "react";
+import { useRef, useState, forwardRef, useMemo } from "react";
 import {
   Box,
   TextField,
@@ -40,9 +40,9 @@ type FormState = {
   rooms: string;
   propertyType: PropertyType;
   operationType: OperationType;
-  images: string;
+  images: string;       // URLs separadas por coma
   description: string;
-  agencyLogo: string;
+  agencyLogo: string;   // URL del logo
   agencyPlan: AgencyPlan;
 };
 
@@ -54,6 +54,13 @@ function newKey() {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
+
+// util seguro para parsear las URLs separadas por coma
+const splitUrls = (s: string) =>
+  s
+    .split(",")
+    .map((x) => x.trim())
+    .filter((x) => x && /^(https?:)?\/\//i.test(x));
 
 export default function PublicarPage() {
   const theme = useTheme();
@@ -83,9 +90,26 @@ export default function PublicarPage() {
   const set = <K extends keyof FormState>(k: K, v: FormState[K]) =>
     setF((s) => ({ ...s, [k]: v }));
 
+  const imageList = useMemo(() => splitUrls(f.images).slice(0, 8), [f.images]);
+  const hasLogo = useMemo(() => !!f.agencyLogo && /^(https?:)?\/\//i.test(f.agencyLogo), [f.agencyLogo]);
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (busy) return;
+
+    // Validación mínima (visible pero no invasiva)
+    const errors: string[] = [];
+    if (!f.title.trim()) errors.push("Título es obligatorio");
+    if (!f.location.trim()) errors.push("Ubicación es obligatoria");
+    const priceNum = Number(f.price);
+    if (!priceNum || Number.isNaN(priceNum) || priceNum <= 0) errors.push("Precio debe ser mayor a 0");
+    if (imageList.length === 0) errors.push("Agregá al menos 1 URL de imagen válida (http/https)");
+
+    if (errors.length) {
+      setMsg({ type: "err", text: errors.join(" · ") });
+      return;
+    }
+
     setBusy(true);
     setMsg(null);
     setNewId(null);
@@ -99,14 +123,14 @@ export default function PublicarPage() {
         },
         body: JSON.stringify({
           idempotencyKey: key,
-          title: f.title,
-          location: f.location,
-          price: Number(f.price),
+          title: f.title.trim(),
+          location: f.location.trim(),
+          price: priceNum,
           currency: f.currency,
           rooms: Number(f.rooms || 0),
           propertyType: f.propertyType,
           operationType: f.operationType,
-          images: f.images,
+          images: imageList, // ya limpio
           description: f.description,
           agency: f.agencyLogo
             ? { logo: f.agencyLogo, plan: f.agencyPlan }
@@ -133,6 +157,7 @@ export default function PublicarPage() {
     }
   }
 
+  // estilos de plan (visual pro)
   const planChip = (plan: AgencyPlan) => {
     const common = { sx: { fontWeight: 700, color: "#0b0b0f" } as any };
     if (plan === "premium")
@@ -182,6 +207,7 @@ export default function PublicarPage() {
         sx: {
           borderRadius: fullScreen ? 0 : 4,
           overflow: "hidden",
+          // look moderno (glass)
           background:
             "linear-gradient(180deg, rgba(20,22,27,.95) 0%, rgba(12,14,18,.96) 100%)",
           backdropFilter: "blur(10px)",
@@ -192,6 +218,7 @@ export default function PublicarPage() {
         },
       }}
     >
+      {/* HEADER FIJO */}
       <DialogTitle
         sx={{
           py: 1.25,
@@ -227,6 +254,7 @@ export default function PublicarPage() {
         </Box>
       </DialogTitle>
 
+      {/* FORM + SCROLL INTERNO SUAVE */}
       <Box component="form" onSubmit={submit}>
         <DialogContent
           dividers
@@ -243,6 +271,7 @@ export default function PublicarPage() {
           }}
         >
           <Box sx={{ display: "grid", gap: 6 }}>
+            {/* Bloque 1 */}
             <Box sx={{ display: "grid", gap: 6 }}>
               <TextField
                 required
@@ -351,10 +380,56 @@ export default function PublicarPage() {
                 onChange={(e) => set("images", e.target.value)}
                 fullWidth
               />
+
+              {/* PREVIEW DE IMÁGENES */}
+              {imageList.length > 0 && (
+                <Box sx={{ display: "grid", gap: 1.5 }}>
+                  <Box sx={{ fontSize: 12, opacity: 0.8 }}>Previsualización</Box>
+                  <Box
+                    sx={{
+                      display: "grid",
+                      gridTemplateColumns: {
+                        xs: "repeat(3, 1fr)",
+                        sm: "repeat(4, 1fr)",
+                      },
+                      gap: 1,
+                    }}
+                  >
+                    {imageList.map((src, i) => (
+                      <Box
+                        key={i}
+                        sx={{
+                          position: "relative",
+                          pt: "75%", // 4:3
+                          borderRadius: 1.5,
+                          overflow: "hidden",
+                          border: "1px solid rgba(255,255,255,.1)",
+                          backgroundColor: "rgba(255,255,255,.03)",
+                        }}
+                      >
+                        {/* uso <img> para no depender de next/image domains */}
+                        <img
+                          src={src}
+                          alt={`img-${i}`}
+                          style={{
+                            position: "absolute",
+                            inset: 0,
+                            width: "100%",
+                            height: "100%",
+                            objectFit: "cover",
+                          }}
+                          loading="lazy"
+                        />
+                      </Box>
+                    ))}
+                  </Box>
+                </Box>
+              )}
             </Box>
 
             <Divider flexItem sx={{ opacity: 0.2 }} />
 
+            {/* Bloque 2 */}
             <Box sx={{ display: "grid", gap: 6 }}>
               <TextField
                 label="Descripción"
@@ -373,13 +448,46 @@ export default function PublicarPage() {
                   alignItems: "center",
                 }}
               >
-                <TextField
-                  label="Logo inmobiliaria (URL opcional)"
-                  placeholder="https://.../logo.png"
-                  value={f.agencyLogo}
-                  onChange={(e) => set("agencyLogo", e.target.value)}
-                  fullWidth
-                />
+                <Box sx={{ display: "grid", gap: 1 }}>
+                  <TextField
+                    label="Logo inmobiliaria (URL opcional)"
+                    placeholder="https://.../logo.png"
+                    value={f.agencyLogo}
+                    onChange={(e) => set("agencyLogo", e.target.value)}
+                    fullWidth
+                  />
+                  {/* PREVIEW DEL LOGO */}
+                  {hasLogo && (
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 1,
+                        p: 1,
+                        border: "1px solid rgba(255,255,255,.08)",
+                        borderRadius: 1.5,
+                        width: "100%",
+                        maxWidth: 280,
+                        background: "rgba(255,255,255,.03)",
+                      }}
+                    >
+                      <img
+                        src={f.agencyLogo}
+                        alt="logo agencia"
+                        style={{
+                          width: 36,
+                          height: 36,
+                          objectFit: "contain",
+                          borderRadius: 6,
+                          background: "rgba(255,255,255,.06)",
+                        }}
+                      />
+                      <Box sx={{ fontSize: 12, opacity: 0.85, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                        {f.agencyLogo}
+                      </Box>
+                    </Box>
+                  )}
+                </Box>
 
                 <FormControl fullWidth>
                   <InputLabel id="plan-label">Plan</InputLabel>
@@ -410,6 +518,7 @@ export default function PublicarPage() {
           </Box>
         </DialogContent>
 
+        {/* FOOTER FIJO */}
         <DialogActions
           sx={{
             py: 1.25,
@@ -447,6 +556,7 @@ export default function PublicarPage() {
     </Dialog>
   );
 }
+
 
 
 

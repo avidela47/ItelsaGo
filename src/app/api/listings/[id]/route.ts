@@ -1,52 +1,90 @@
+// @ts-nocheck
 import { NextResponse } from "next/server";
 import { dbConnect } from "@/lib/mongo";
 import Listing from "@/models/Listing";
+import mongoose from "mongoose";
 
-const TYPES = ["depto", "casa", "lote", "local"] as const;
-const OPS = ["venta", "alquiler", "temporario"] as const;
+export const dynamic = "force-dynamic";
+
+function bad(msg: string, code = 400) {
+  return NextResponse.json({ ok: false, error: msg }, { status: code });
+}
 
 export async function GET(_req: Request, { params }: { params: { id: string } }) {
   await dbConnect();
-  const doc = await Listing.findById(params.id).lean();
-  if (!doc) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  return NextResponse.json({ id: String(doc._id), ...doc });
+  const { id } = params;
+  if (!id || !mongoose.isValidObjectId(id)) return bad("ID inválido");
+
+  const doc = await Listing.findById(id).lean();
+  if (!doc) return bad("No encontrado", 404);
+
+  return NextResponse.json({
+    ok: true,
+    item: {
+      id: String(doc._id),
+      title: doc.title,
+      location: doc.location,
+      price: doc.price,
+      currency: doc.currency,
+      rooms: doc.rooms,
+      description: doc.description || "",
+      images: Array.isArray(doc.images) ? doc.images : [],
+      propertyType: doc.propertyType,
+      operationType: doc.operationType,
+      agency: doc.agency || null,
+      createdAt: doc.createdAt,
+    },
+  });
 }
 
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+export async function PUT(req: Request, { params }: { params: { id: string } }) {
   await dbConnect();
-  const body = await req.json();
+  const { id } = params;
+  if (!id || !mongoose.isValidObjectId(id)) return bad("ID inválido");
 
-  const images: string[] = Array.isArray(body.images)
-    ? body.images
-    : typeof body.images === "string"
-    ? body.images.split(/[\n,]+/).map((s: string) => s.trim()).filter(Boolean)
-    : [];
+  const body = await req.json().catch(() => ({}));
+  const errors: string[] = [];
 
-  const update: any = {
-    title: String(body.title ?? "").trim(),
-    description: String(body.description ?? ""),
-    price: Number(body.price ?? 0),
-    currency: String(body.currency ?? "USD").toUpperCase(),
-    location: String(body.location ?? "").trim(),
-    rooms: Number(body.rooms ?? 0),
-    propertyType: String(body.propertyType ?? ""),
-    operationType: String(body.operationType ?? ""),
-    images,
-  };
+  const title = (body.title ?? "").trim();
+  const location = (body.location ?? "").trim();
+  const price = Number(body.price);
+  const currency = body.currency ?? "ARS";
+  const rooms = Number(body.rooms ?? 0);
+  const propertyType = body.propertyType ?? "depto";
+  const operationType = body.operationType ?? "venta";
+  const images = Array.isArray(body.images) ? body.images.filter((x: any) => typeof x === "string" && x.trim()) : [];
+  const description = body.description ?? "";
 
-  if (!update.title) return NextResponse.json({ error: "Falta título" }, { status: 400 });
-  if (!update.location) return NextResponse.json({ error: "Falta ubicación" }, { status: 400 });
-  if (!TYPES.includes(update.propertyType)) return NextResponse.json({ error: "propertyType inválido" }, { status: 400 });
-  if (!OPS.includes(update.operationType)) return NextResponse.json({ error: "operationType inválido" }, { status: 400 });
+  const agency =
+    body.agency && typeof body.agency === "object"
+      ? { logo: body.agency.logo || undefined, plan: body.agency.plan || "free" }
+      : undefined;
 
-  const doc = await Listing.findByIdAndUpdate(params.id, update, { new: true }).lean();
-  if (!doc) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!title) errors.push("Título requerido");
+  if (!location) errors.push("Ubicación requerida");
+  if (!price || Number.isNaN(price) || price <= 0) errors.push("Precio inválido");
+  if (!images.length) errors.push("Al menos 1 imagen");
 
-  return NextResponse.json({ ok: true, id: String(doc._id) });
+  if (errors.length) return NextResponse.json({ ok: false, errors }, { status: 400 });
+
+  const update: any = { title, location, price, currency, rooms, propertyType, operationType, images, description };
+  if (agency) update.agency = agency;
+
+  const updated = await Listing.findByIdAndUpdate(id, update, { new: true, runValidators: false }).lean();
+  if (!updated) return bad("No encontrado", 404);
+
+  return NextResponse.json({ ok: true, id: String(updated._id) });
 }
 
 export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
   await dbConnect();
-  await Listing.findByIdAndDelete(params.id);
-  return NextResponse.json({ ok: true });
+  const { id } = params;
+  if (!id || !mongoose.isValidObjectId(id)) return bad("ID inválido");
+
+  const res = await Listing.findByIdAndDelete(id);
+  if (!res) return bad("No encontrado", 404);
+
+  return NextResponse.json({ ok: true, deleted: String(id) });
 }
+
+

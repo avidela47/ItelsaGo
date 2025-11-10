@@ -1,156 +1,145 @@
-import { dbConnect } from "@/lib/mongo";
-import Listing from "@/models/Listing";
+// @ts-nocheck
+import { headers } from "next/headers";
+import ListingsGrid from "@/components/ListingsGrid";
 
 export const dynamic = "force-dynamic";
 
-type Item = {
-  _id: string;
+type ListingItem = {
+  id: string;
   title: string;
   location: string;
   price: number;
-  currency: string;
+  currency: "ARS" | "USD" | string;
   rooms?: number;
   images: string[];
-  propertyType: string;
-  operationType: string;
-  agency?: { logo?: string; plan?: "free" | "sponsor" | "premium"; name?: string } | null;
+  propertyType?: string;
+  operationType?: string;
+  agency?: { logo?: string; plan?: "free" | "sponsor" | "premium" } | null;
 };
 
-function badgeColor(plan?: string) {
-  if (plan === "premium") return "#ffd700"; // dorado
-  if (plan === "sponsor") return "#22d3ee"; // cian
-  return "#444"; // free
+const PLAN_RANK: Record<string, number> = {
+  premium: 0,
+  sponsor: 1,
+  free: 2,
+  "": 3,
+  undefined: 3,
+  null: 3,
+};
+
+function paramsToString(p: URLSearchParams) {
+  const s = p.toString();
+  return s ? `?${s}` : "";
 }
 
-export default async function Page() {
-  await dbConnect();
-  const docs = (await Listing.find({ "images.0": { $exists: true, $ne: "" } })
-    .sort({ createdAt: -1 })
-    .limit(30)
-    .lean()) as Item[];
+function getOriginServerSafe() {
+  if (process.env.NEXT_PUBLIC_BASE_URL) return process.env.NEXT_PUBLIC_BASE_URL;
+  try {
+    const h = headers();
+    const proto = h.get("x-forwarded-proto") ?? "http";
+    const host = h.get("x-forwarded-host") ?? h.get("host");
+    if (host) return `${proto}://${host}`;
+  } catch {}
+  return "http://localhost:3000";
+}
+
+export default async function InmueblesPage({ searchParams }) {
+  const origin = getOriginServerSafe();
+
+  const q = (searchParams.q as string) || "";
+  const propertyType = (searchParams.propertyType as string) || "";
+  const operationType = (searchParams.operationType as string) || "";
+  const currency = (searchParams.currency as string) || "";
+  const priceMin = (searchParams.priceMin as string) || "";
+  const priceMax = (searchParams.priceMax as string) || "";
+  const page = Number(searchParams.page || 1) || 1;
+  const pageSize = Number(searchParams.pageSize || 9) || 9;
+
+  const apiParams = new URLSearchParams();
+  if (q) apiParams.set("q", q);
+  if (propertyType) apiParams.set("propertyType", propertyType);
+  if (operationType) apiParams.set("operationType", operationType);
+  if (currency) apiParams.set("currency", currency);
+  if (priceMin) apiParams.set("priceMin", priceMin);
+  if (priceMax) apiParams.set("priceMax", priceMax);
+  apiParams.set("page", String(page));
+  apiParams.set("pageSize", String(pageSize));
+
+  const res = await fetch(`${origin}/api/listings${paramsToString(apiParams)}`, {
+    cache: "no-store",
+    next: { revalidate: 0 },
+  });
+  if (!res.ok) throw new Error("No se pudo cargar el listado");
+
+  const data = await res.json();
+  let items: ListingItem[] = data?.items || [];
+
+  // Orden server-side por plan y después precio desc
+  items = items.slice().sort((a, b) => {
+    const ra = PLAN_RANK[a?.agency?.plan ?? ""] ?? 3;
+    const rb = PLAN_RANK[b?.agency?.plan ?? ""] ?? 3;
+    if (ra !== rb) return ra - rb;
+    return (b.price || 0) - (a.price || 0);
+  });
 
   return (
-    <main style={{ maxWidth: 1200, margin: "0 auto", padding: 16 }}>
-      <h1 className="text-2xl font-bold mb-4">Inmuebles</h1>
-
+    <main style={{ padding: "24px 16px", maxWidth: 1200, margin: "0 auto" }}>
       <div
         style={{
-          display: "grid",
-          gap: 16,
-          gridTemplateColumns: "repeat(1, minmax(0, 1fr))",
+          display: "flex",
+          gap: 12,
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginBottom: 16,
         }}
       >
-        <style>{`
-          @media (min-width: 640px) { .grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-          @media (min-width: 1024px) { .grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-        `}</style>
+        <h1 style={{ margin: 0, fontSize: 24, fontWeight: 800 }}>Inmuebles</h1>
 
-        <div className="grid-2 grid-3" style={{ display: "grid", gap: 16 }}>
-          {docs.map((it) => {
-            const first = it.images?.[0] || "";
-            const priceFmt =
-              it.currency === "ARS"
-                ? `ARS ${Number(it.price).toLocaleString("es-AR")}`
-                : `${it.currency} ${Number(it.price).toLocaleString("en-US")}`;
-
-            return (
-              <a
-                key={it._id}
-                href={`/inmuebles/${it._id}`}
-                style={{
-                  display: "block",
-                  borderRadius: 16,
-                  overflow: "hidden",
-                  border: "1px solid rgba(255,255,255,.1)",
-                  background: "rgba(255,255,255,.05)",
-                  textDecoration: "none",
-                  color: "inherit",
-                }}
-              >
-                {/* Imagen principal con overlay de logo y badge */}
-                <div style={{ position: "relative", width: "100%", aspectRatio: "16 / 9", background: "#111" }}>
-                  {first ? (
-                    <img
-                      src={first}
-                      alt={it.title}
-                      style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-                      loading="lazy"
-                    />
-                  ) : (
-                    <div
-                      style={{
-                        width: "100%",
-                        height: "100%",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        color: "rgba(255,255,255,.6)",
-                      }}
-                    >
-                      Sin imagen
-                    </div>
-                  )}
-
-                  {/* ✅ Logo inmobiliaria (si existe) */}
-                  {it.agency?.logo && (
-                    <div
-                      style={{
-                        position: "absolute",
-                        left: 8,
-                        bottom: 8,
-                        background: "rgba(0,0,0,.5)",
-                        borderRadius: 8,
-                        padding: 6,
-                        border: "1px solid rgba(255,255,255,.15)",
-                      }}
-                    >
-                      <img
-                        src={it.agency.logo}
-                        alt="Logo inmobiliaria"
-                        style={{ height: 28, width: "auto", display: "block" }}
-                        loading="lazy"
-                      />
-                    </div>
-                  )}
-
-                  {/* ✅ Badge de plan */}
-                  {it.agency?.plan && (
-                    <span
-                      style={{
-                        position: "absolute",
-                        top: 8,
-                        right: 8,
-                        fontSize: 12,
-                        fontWeight: 800,
-                        padding: "4px 8px",
-                        borderRadius: 8,
-                        background: badgeColor(it.agency.plan),
-                        color: "#111",
-                        border: it.agency.plan === "premium" ? "1px solid rgba(0,0,0,.2)" : "none",
-                      }}
-                    >
-                      {it.agency.plan.toUpperCase()}
-                    </span>
-                  )}
-                </div>
-
-                <div style={{ padding: 12 }}>
-                  <h2 style={{ fontWeight: 600, lineHeight: 1.2 }}>{it.title}</h2>
-                  <div style={{ fontSize: 14, opacity: 0.75 }}>{it.location}</div>
-                  <div style={{ marginTop: 8, fontSize: 18, fontWeight: 700 }}>{priceFmt}</div>
-                  <div style={{ marginTop: 4, fontSize: 14, opacity: 0.85 }}>
-                    {it.propertyType?.toUpperCase()} • {it.operationType?.toUpperCase()}
-                    {typeof it.rooms === "number" ? ` • ${it.rooms} amb` : ""}
-                  </div>
-                </div>
-              </a>
-            );
-          })}
+        <div style={{ display: "flex", gap: 8 }}>
+          <a
+            href="/favoritos"
+            style={{
+              textDecoration: "none",
+              padding: "10px 14px",
+              borderRadius: 10,
+              border: "1px solid rgba(255,255,255,.12)",
+              background:
+                "linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.06))",
+              fontWeight: 700,
+              fontSize: 14,
+            }}
+          >
+            Favoritos
+          </a>
+          <a
+            href="/publicar"
+            style={{
+              textDecoration: "none",
+              padding: "10px 14px",
+              borderRadius: 10,
+              border: "1px solid rgba(255,255,255,.12)",
+              background:
+                "linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.06))",
+              fontWeight: 700,
+              fontSize: 14,
+            }}
+          >
+            Publicar
+          </a>
         </div>
       </div>
+
+      {/* Grid con filtro "Solo favoritos" y brillos premium (client component) */}
+      <ListingsGrid items={items} />
     </main>
   );
 }
+
+
+
+
+
+
+
 
 
 
