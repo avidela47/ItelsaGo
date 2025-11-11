@@ -53,9 +53,7 @@ export default function InmueblesPage() {
         setLoading(false);
       }
     })();
-    return () => {
-      ok = false;
-    };
+    return () => { ok = false; };
   }, []);
 
   const [initialMin, initialMax] = useMemo(() => {
@@ -124,17 +122,7 @@ export default function InmueblesPage() {
 
   return (
     <main style={{ padding: "24px 16px", maxWidth: 1200, margin: "0 auto" }}>
-      <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}>
-        <Typography variant="h4" fontWeight={800}>
-          Inmuebles
-        </Typography>
-        <Box sx={{ ml: "auto" }}>
-          <Button href="/publicar" variant="contained">
-            Publicar
-          </Button>
-        </Box>
-      </Box>
-
+      {/* Filtros arriba */}
       <FiltersBar value={filters} onChange={setFilters} items={itemsAll} />
 
       {loading ? (
@@ -150,9 +138,10 @@ export default function InmueblesPage() {
           No hay resultados con los filtros aplicados.
         </Typography>
       ) : (
+        /* 4 por fila en lg; 3 md; 2 sm; 1 xs */
         <Box
           sx={{
-            mt: 1,
+            mt: 2,
             display: "grid",
             gridTemplateColumns: {
               xs: "1fr",
@@ -161,6 +150,7 @@ export default function InmueblesPage() {
               lg: "repeat(4, 1fr)",
             },
             gap: 3,
+            alignItems: "stretch",
           }}
         >
           {list.map((it) => (
@@ -168,7 +158,11 @@ export default function InmueblesPage() {
           ))}
         </Box>
       )}
+
+      {/* Solo admins ven el botón Publicar; si querés, sacalo de acá */}
+      <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 3 }}>
+        <Button href="/publicar" variant="contained">Publicar</Button>
+      </Box>
     </main>
   );
 }
-

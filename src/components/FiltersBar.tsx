@@ -115,6 +115,19 @@ export default function FiltersBar({ value, onChange, items }: Props) {
         },
         alignItems: "center",
         mb: 2,
+        p: 2,
+        borderRadius: 4,
+        background: "rgba(255,255,255,0.05)",
+        border: "1px solid rgba(255,255,255,0.12)",
+        backdropFilter: "blur(4px)",
+        color: "#e9edf2",
+        '& .MuiInputBase-root, & .MuiSelect-select, & .MuiChip-root': { color: '#f0f4f8' },
+        '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)' },
+        '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.25)' },
+        '& .MuiSlider-track': { backgroundColor: '#69d4ff' },
+        '& .MuiSlider-thumb': { backgroundColor: '#ffffff', boxShadow: '0 0 0 3px rgba(0,0,0,0.3)' },
+        '& .MuiChip-filledPrimary': { background: 'linear-gradient(135deg,#2be4ff,#36b5ff)', color: '#061016' },
+        '& .MuiChip-outlined': { borderColor: 'rgba(255,255,255,0.25)' },
       }}
     >
       {/* BÚSQUEDA */}

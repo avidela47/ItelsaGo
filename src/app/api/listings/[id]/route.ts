@@ -1,90 +1,74 @@
-// @ts-nocheck
-import { NextResponse } from "next/server";
-import { dbConnect } from "@/lib/mongo";
+import { NextResponse, NextRequest } from "next/server";
+import dbConnect from "@/lib/mongo";
 import Listing from "@/models/Listing";
-import mongoose from "mongoose";
+import { isAdminFromRequest } from "@/lib/auth";
 
-export const dynamic = "force-dynamic";
+type Ctx = { params: { id: string } };
 
-function bad(msg: string, code = 400) {
-  return NextResponse.json({ ok: false, error: msg }, { status: code });
+export async function GET(_req: NextRequest, { params }: Ctx) {
+  try {
+    await dbConnect();
+    const item = await Listing.findById(params.id).lean();
+    if (!item) return NextResponse.json({ ok: false, error: "No encontrado" }, { status: 404 });
+    return NextResponse.json({ ok: true, item });
+  } catch (err: any) {
+    console.error("GET /api/listings/[id] error:", err);
+    return NextResponse.json({ ok: false, error: "Error interno" }, { status: 500 });
+  }
 }
 
-export async function GET(_req: Request, { params }: { params: { id: string } }) {
-  await dbConnect();
-  const { id } = params;
-  if (!id || !mongoose.isValidObjectId(id)) return bad("ID inválido");
+export async function PUT(req: NextRequest, { params }: Ctx) {
+  try {
+    if (!isAdminFromRequest(req)) {
+      return NextResponse.json({ error: "Solo admin" }, { status: 401 });
+    }
+    await dbConnect();
+    const body = await req.json();
+    const agency = body.agency || {};
 
-  const doc = await Listing.findById(id).lean();
-  if (!doc) return bad("No encontrado", 404);
+    const update = {
+      title: body.title,
+      location: body.location,
+      price: Number(body.price),
+      currency: body.currency,
+      rooms: Number(body.rooms ?? 0),
+      propertyType: body.propertyType,
+      operationType: body.operationType,
+      images: Array.isArray(body.images) ? body.images : [],
+      description: body.description || "",
+      agency: {
+        logo: agency.logo || "",
+        plan: agency.plan || "free",
+        whatsapp: agency.whatsapp || "", // ✅ NUEVO
+      },
+    };
 
-  return NextResponse.json({
-    ok: true,
-    item: {
-      id: String(doc._id),
-      title: doc.title,
-      location: doc.location,
-      price: doc.price,
-      currency: doc.currency,
-      rooms: doc.rooms,
-      description: doc.description || "",
-      images: Array.isArray(doc.images) ? doc.images : [],
-      propertyType: doc.propertyType,
-      operationType: doc.operationType,
-      agency: doc.agency || null,
-      createdAt: doc.createdAt,
-    },
-  });
+    const item = await Listing.findByIdAndUpdate(params.id, update, { new: true });
+    if (!item) return NextResponse.json({ ok: false, error: "No encontrado" }, { status: 404 });
+
+    return NextResponse.json({ ok: true, item });
+  } catch (err: any) {
+    console.error("PUT /api/listings/[id] error:", err);
+    return NextResponse.json({ ok: false, error: "Error interno" }, { status: 500 });
+  }
 }
 
-export async function PUT(req: Request, { params }: { params: { id: string } }) {
-  await dbConnect();
-  const { id } = params;
-  if (!id || !mongoose.isValidObjectId(id)) return bad("ID inválido");
-
-  const body = await req.json().catch(() => ({}));
-  const errors: string[] = [];
-
-  const title = (body.title ?? "").trim();
-  const location = (body.location ?? "").trim();
-  const price = Number(body.price);
-  const currency = body.currency ?? "ARS";
-  const rooms = Number(body.rooms ?? 0);
-  const propertyType = body.propertyType ?? "depto";
-  const operationType = body.operationType ?? "venta";
-  const images = Array.isArray(body.images) ? body.images.filter((x: any) => typeof x === "string" && x.trim()) : [];
-  const description = body.description ?? "";
-
-  const agency =
-    body.agency && typeof body.agency === "object"
-      ? { logo: body.agency.logo || undefined, plan: body.agency.plan || "free" }
-      : undefined;
-
-  if (!title) errors.push("Título requerido");
-  if (!location) errors.push("Ubicación requerida");
-  if (!price || Number.isNaN(price) || price <= 0) errors.push("Precio inválido");
-  if (!images.length) errors.push("Al menos 1 imagen");
-
-  if (errors.length) return NextResponse.json({ ok: false, errors }, { status: 400 });
-
-  const update: any = { title, location, price, currency, rooms, propertyType, operationType, images, description };
-  if (agency) update.agency = agency;
-
-  const updated = await Listing.findByIdAndUpdate(id, update, { new: true, runValidators: false }).lean();
-  if (!updated) return bad("No encontrado", 404);
-
-  return NextResponse.json({ ok: true, id: String(updated._id) });
+export async function DELETE(req: NextRequest, { params }: Ctx) {
+  try {
+    if (!isAdminFromRequest(req)) {
+      return NextResponse.json({ error: "Solo admin" }, { status: 401 });
+    }
+    await dbConnect();
+    const out = await Listing.findByIdAndDelete(params.id);
+    if (!out) return NextResponse.json({ ok: false, error: "No encontrado" }, { status: 404 });
+    return NextResponse.json({ ok: true });
+  } catch (err: any) {
+    console.error("DELETE /api/listings/[id] error:", err);
+    return NextResponse.json({ ok: false, error: "Error interno" }, { status: 500 });
+  }
 }
 
-export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
-  await dbConnect();
-  const { id } = params;
-  if (!id || !mongoose.isValidObjectId(id)) return bad("ID inválido");
 
-  const res = await Listing.findByIdAndDelete(id);
-  if (!res) return bad("No encontrado", 404);
 
-  return NextResponse.json({ ok: true, deleted: String(id) });
-}
 
 

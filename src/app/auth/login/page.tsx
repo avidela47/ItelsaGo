@@ -1,47 +1,47 @@
 "use client";
-import React, { useState } from "react";
+
+import { useState } from "react";
+import { useSearchParams } from "next/navigation";
+import Box from "@mui/material/Box";
+import TextField from "@mui/material/TextField";
+import Button from "@mui/material/Button";
+import Typography from "@mui/material/Typography";
+import Paper from "@mui/material/Paper";
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const sp = useSearchParams();
+  const next = sp.get("next") || "/panel";
+  const [code, setCode] = useState("");
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function doLogin(e: React.FormEvent) {
     e.preventDefault();
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || "Error");
-      window.location.href = "/panel";
-    } catch (err: any) {
-      setError(err.message || "Error");
-    } finally {
-      setLoading(false);
+    // DEV: aceptamos un “código” simple. Cambialo cuando tengamos auth real.
+    if (code.trim() !== "") {
+      // Set cookie role=admin (expira en 12h)
+      document.cookie = `role=admin; Path=/; Max-Age=${60 * 60 * 12}; SameSite=Lax`;
+      window.location.href = next;
     }
   }
 
   return (
-    <div style={{ maxWidth: 420 }}>
-      <h2>Ingresar</h2>
-      <form onSubmit={handleSubmit}>
-        <label style={{ display: "block", marginTop: 8 }}>Email</label>
-        <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" required />
-
-        <label style={{ display: "block", marginTop: 8 }}>Contraseña</label>
-        <input value={password} onChange={(e) => setPassword(e.target.value)} type="password" required />
-
-        <div style={{ marginTop: 12 }}>
-          <button className="btn" type="submit" disabled={loading}>{loading ? "Ingresando..." : "Ingresar"}</button>
-        </div>
-        {error && <p style={{ color: "#b00020" }}>{error}</p>}
-      </form>
-    </div>
+    <main style={{ padding: 24, display: "grid", placeItems: "center", minHeight: "60vh" }}>
+      <Paper sx={{ p: 3, width: 360 }}>
+        <Typography variant="h6" fontWeight={800} sx={{ mb: 2 }}>
+          Ingreso administrador
+        </Typography>
+        <form onSubmit={doLogin} style={{ display: "grid", gap: 12 }}>
+          <TextField
+            label="Código de acceso (DEV)"
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+            fullWidth
+          />
+          <Button type="submit" variant="contained">Entrar</Button>
+          <Typography variant="body2" sx={{ opacity: .7 }}>
+            Solo para desarrollo. Después lo reemplazamos por auth real (correo/clave o SSO).
+          </Typography>
+        </form>
+      </Paper>
+    </main>
   );
 }
