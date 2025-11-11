@@ -1,145 +1,168 @@
-// @ts-nocheck
-import { headers } from "next/headers";
-import ListingsGrid from "@/components/ListingsGrid";
+"use client";
 
-export const dynamic = "force-dynamic";
+import { useEffect, useMemo, useState } from "react";
+import Box from "@mui/material/Box";
+import Typography from "@mui/material/Typography";
+import CircularProgress from "@mui/material/CircularProgress";
+import Button from "@mui/material/Button";
 
-type ListingItem = {
-  id: string;
+import FiltersBar, {
+  FilterState,
+  SortKey,
+  Plan,
+  PropertyType,
+} from "@/components/FiltersBar";
+import PropertyCard from "@/components/cards/PropertyCard";
+
+type Item = {
+  _id: string;
   title: string;
-  location: string;
   price: number;
-  currency: "ARS" | "USD" | string;
-  rooms?: number;
+  currency: "ARS" | "USD";
+  location: string;
   images: string[];
-  propertyType?: string;
-  operationType?: string;
-  agency?: { logo?: string; plan?: "free" | "sponsor" | "premium" } | null;
+  rooms?: number;
+  propertyType?: "depto" | "casa" | "lote" | "local";
+  agency?: { logo?: string; plan?: "premium" | "sponsor" | "free" };
+  createdAt?: string;
 };
 
-const PLAN_RANK: Record<string, number> = {
-  premium: 0,
-  sponsor: 1,
-  free: 2,
-  "": 3,
-  undefined: 3,
-  null: 3,
-};
+export default function InmueblesPage() {
+  const [loading, setLoading] = useState(true);
+  const [itemsAll, setItemsAll] = useState<Item[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
-function paramsToString(p: URLSearchParams) {
-  const s = p.toString();
-  return s ? `?${s}` : "";
-}
+  useEffect(() => {
+    let ok = true;
+    (async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const base = process.env.NEXT_PUBLIC_BASE_URL || "";
+        const res = await fetch(`${base}/api/listings`, {
+          cache: "no-store",
+          next: { revalidate: 0 },
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data?.error || "No se pudo cargar");
+        if (!ok) return;
+        setItemsAll(Array.isArray(data?.items) ? data.items : []);
+      } catch (err: any) {
+        setError(err?.message || "Error de red");
+      } finally {
+        setLoading(false);
+      }
+    })();
+    return () => { ok = false; };
+  }, []);
 
-function getOriginServerSafe() {
-  if (process.env.NEXT_PUBLIC_BASE_URL) return process.env.NEXT_PUBLIC_BASE_URL;
-  try {
-    const h = headers();
-    const proto = h.get("x-forwarded-proto") ?? "http";
-    const host = h.get("x-forwarded-host") ?? h.get("host");
-    if (host) return `${proto}://${host}`;
-  } catch {}
-  return "http://localhost:3000";
-}
+  const [initialMin, initialMax] = useMemo(() => {
+    const prices = itemsAll.map((i) => i.price || 0).filter((n) => n > 0);
+    return [
+      prices.length ? Math.min(...prices) : 0,
+      prices.length ? Math.max(...prices) : 1000000,
+    ];
+  }, [itemsAll]);
 
-export default async function InmueblesPage({ searchParams }) {
-  const origin = getOriginServerSafe();
-
-  const q = (searchParams.q as string) || "";
-  const propertyType = (searchParams.propertyType as string) || "";
-  const operationType = (searchParams.operationType as string) || "";
-  const currency = (searchParams.currency as string) || "";
-  const priceMin = (searchParams.priceMin as string) || "";
-  const priceMax = (searchParams.priceMax as string) || "";
-  const page = Number(searchParams.page || 1) || 1;
-  const pageSize = Number(searchParams.pageSize || 9) || 9;
-
-  const apiParams = new URLSearchParams();
-  if (q) apiParams.set("q", q);
-  if (propertyType) apiParams.set("propertyType", propertyType);
-  if (operationType) apiParams.set("operationType", operationType);
-  if (currency) apiParams.set("currency", currency);
-  if (priceMin) apiParams.set("priceMin", priceMin);
-  if (priceMax) apiParams.set("priceMax", priceMax);
-  apiParams.set("page", String(page));
-  apiParams.set("pageSize", String(pageSize));
-
-  const res = await fetch(`${origin}/api/listings${paramsToString(apiParams)}`, {
-    cache: "no-store",
-    next: { revalidate: 0 },
+  const [filters, setFilters] = useState<FilterState>({
+    q: "",
+    sort: "recent",
+    plan: "all",
+    location: "all",
+    type: "all",
+    price: [0, 1000000],
+    rooms: "all",
   });
-  if (!res.ok) throw new Error("No se pudo cargar el listado");
 
-  const data = await res.json();
-  let items: ListingItem[] = data?.items || [];
+  useEffect(() => {
+    setFilters((f) => {
+      const isDefault = f.price[0] === 0 && f.price[1] === 1000000;
+      return isDefault ? { ...f, price: [initialMin, initialMax] } : f;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialMin, initialMax]);
 
-  // Orden server-side por plan y después precio desc
-  items = items.slice().sort((a, b) => {
-    const ra = PLAN_RANK[a?.agency?.plan ?? ""] ?? 3;
-    const rb = PLAN_RANK[b?.agency?.plan ?? ""] ?? 3;
-    if (ra !== rb) return ra - rb;
-    return (b.price || 0) - (a.price || 0);
-  });
+  const list = useMemo(() => {
+    const q = filters.q.trim().toLowerCase();
+
+    let out = itemsAll.filter((it) => {
+      const hay = (it.title || "").toLowerCase();
+      const loc = (it.location || "").toLowerCase();
+      const matchQ = !q || hay.includes(q) || loc.includes(q);
+
+      const plan: Plan = (it.agency?.plan as Plan) || "free";
+      const matchPlan = filters.plan === "all" || plan === filters.plan;
+
+      const matchLoc = filters.location === "all" || it.location === filters.location;
+
+      const t: PropertyType = (it.propertyType as PropertyType) || "all";
+      const matchType = filters.type === "all" || t === filters.type;
+
+      const rooms = typeof it.rooms === "number" ? it.rooms : undefined;
+      const matchRooms = filters.rooms === "all" ? true : rooms === Number(filters.rooms);
+
+      const p = Number(it.price || 0);
+      const matchPrice = p >= filters.price[0] && p <= filters.price[1];
+
+      return matchQ && matchPlan && matchLoc && matchType && matchRooms && matchPrice;
+    });
+
+    const sort: SortKey = filters.sort;
+    out.sort((a, b) => {
+      if (sort === "price_asc") return (a.price || 0) - (b.price || 0);
+      if (sort === "price_desc") return (b.price || 0) - (a.price || 0);
+      if (sort === "rooms_desc") return (b.rooms || 0) - (a.rooms || 0);
+      const da = a.createdAt ? Date.parse(a.createdAt) : 0;
+      const db = b.createdAt ? Date.parse(b.createdAt) : 0;
+      return db - da;
+    });
+
+    return out;
+  }, [itemsAll, filters]);
 
   return (
     <main style={{ padding: "24px 16px", maxWidth: 1200, margin: "0 auto" }}>
-      <div
-        style={{
-          display: "flex",
-          gap: 12,
-          alignItems: "center",
-          justifyContent: "space-between",
-          marginBottom: 16,
-        }}
-      >
-        <h1 style={{ margin: 0, fontSize: 24, fontWeight: 800 }}>Inmuebles</h1>
+      {/* Filtros arriba */}
+      <FiltersBar value={filters} onChange={setFilters} items={itemsAll} />
 
-        <div style={{ display: "flex", gap: 8 }}>
-          <a
-            href="/favoritos"
-            style={{
-              textDecoration: "none",
-              padding: "10px 14px",
-              borderRadius: 10,
-              border: "1px solid rgba(255,255,255,.12)",
-              background:
-                "linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.06))",
-              fontWeight: 700,
-              fontSize: 14,
-            }}
-          >
-            Favoritos
-          </a>
-          <a
-            href="/publicar"
-            style={{
-              textDecoration: "none",
-              padding: "10px 14px",
-              borderRadius: 10,
-              border: "1px solid rgba(255,255,255,.12)",
-              background:
-                "linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.06))",
-              fontWeight: 700,
-              fontSize: 14,
-            }}
-          >
-            Publicar
-          </a>
-        </div>
-      </div>
+      {loading ? (
+        <Box sx={{ display: "flex", justifyContent: "center", my: 4 }}>
+          <CircularProgress />
+        </Box>
+      ) : error ? (
+        <Typography color="error" sx={{ my: 3 }}>
+          {error}
+        </Typography>
+      ) : list.length === 0 ? (
+        <Typography sx={{ opacity: 0.8, my: 3 }}>
+          No hay resultados con los filtros aplicados.
+        </Typography>
+      ) : (
+        /* 4 por fila en lg; 3 md; 2 sm; 1 xs */
+        <Box
+          sx={{
+            mt: 2,
+            display: "grid",
+            gridTemplateColumns: {
+              xs: "1fr",
+              sm: "repeat(2, 1fr)",
+              md: "repeat(3, 1fr)",
+              lg: "repeat(4, 1fr)",
+            },
+            gap: 3,
+            alignItems: "stretch",
+          }}
+        >
+          {list.map((it) => (
+            <PropertyCard key={it._id} item={it} />
+          ))}
+        </Box>
+      )}
 
-      {/* Grid con filtro "Solo favoritos" y brillos premium (client component) */}
-      <ListingsGrid items={items} />
+      {/* Solo admins ven el botón Publicar; si querés, sacalo de acá */}
+      <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 3 }}>
+        <Button href="/publicar" variant="contained">Publicar</Button>
+      </Box>
     </main>
   );
 }
-
-
-
-
-
-
-
-
-
-

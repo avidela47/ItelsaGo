@@ -25,6 +25,12 @@ a {
 a:hover {
   text-decoration: underline;
 }
+/* Evita subrayado en elementos que gestionan su propio estilo (navbar) */
+.navBtn:hover,
+.navBtn:focus,
+.navBtn:active {
+  text-decoration: none !important;
+}
 
 /* Utils */
 .mt-1 {

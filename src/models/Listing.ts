@@ -1,55 +1,33 @@
-import mongoose, { Schema, models } from "mongoose";
+import mongoose, { Schema, models, model } from "mongoose";
+
+const AgencySchema = new Schema(
+  {
+    logo: { type: String },
+    plan: { type: String, enum: ["premium", "sponsor", "free"], default: "free" },
+    whatsapp: { type: String, default: "" }, // ✅ NUEVO
+  },
+  { _id: false }
+);
 
 const ListingSchema = new Schema(
   {
-    title: { type: String, required: true },
-    location: { type: String, required: true },
+    title: { type: String, required: true, trim: true },
+    location: { type: String, required: true, trim: true },
     price: { type: Number, required: true },
-    currency: { type: String, default: "ARS" },
+    currency: { type: String, enum: ["ARS", "USD"], required: true },
     rooms: { type: Number, default: 0 },
-    description: { type: String, default: "" },
-
-    propertyType: {
-      type: String,
-      enum: ["depto", "casa", "lote", "local"],
-      required: true,
-    },
-    operationType: {
-      type: String,
-      enum: ["venta", "alquiler", "temporario"],
-      required: true,
-    },
-
+    propertyType: { type: String, enum: ["depto", "casa", "lote", "local"], default: "depto" },
+    operationType: { type: String, enum: ["venta", "alquiler", "temporario"], default: "venta" },
     images: { type: [String], default: [] },
-
-    agency: {
-      name: { type: String, default: "" },
-      logo: { type: String, default: "" },
-      plan: {
-        type: String,
-        enum: ["free", "sponsor", "premium"],
-        default: "free",
-      },
-    },
-
-    // ✅ idempotencia: una key única por intento de creación
-    idempotencyKey: { type: String, unique: true, sparse: true },
+    description: { type: String, default: "" },
+    agency: { type: AgencySchema, default: { plan: "free" } },
   },
   { timestamps: true }
 );
 
-// índices útiles para buscar duplicados “por contenido”
-ListingSchema.index({
-  title: 1,
-  location: 1,
-  price: 1,
-  currency: 1,
-  propertyType: 1,
-  operationType: 1,
-});
-
-export default models.Listing || mongoose.model("Listing", ListingSchema);
-
+export type TListing = mongoose.InferSchemaType<typeof ListingSchema>;
+const Listing = models.Listing || model("Listing", ListingSchema);
+export default Listing;
 
 
 

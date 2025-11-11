@@ -15,6 +15,16 @@ const nextConfig = {
       }
     ],
   },
+
+  async redirects() {
+    return [
+      {
+        source: '/',
+        destination: '/inmuebles',
+        permanent: true, // 308 permanente
+      },
+    ];
+  },
 };
 
 module.exports = nextConfig;
