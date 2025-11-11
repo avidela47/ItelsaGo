@@ -1,14 +1,46 @@
-import mongoose, { Schema, models } from "mongoose";
+import mongoose, { Schema, Model } from "mongoose";
 
-const ListingSchema = new Schema(
+type AgencyPlan = "premium" | "sponsor" | "free";
+
+export interface IListing {
+  title: string;
+  location: string;
+  price: number;
+  currency: "ARS" | "USD";
+  rooms?: number;
+  propertyType: "depto" | "casa" | "lote" | "local";
+  operationType: "venta" | "alquiler" | "temporario";
+  images: string[];
+  description?: string;
+  agency?: {
+    logo?: string;
+    plan: AgencyPlan;
+  };
+  createdAt?: Date;
+  updatedAt?: Date;
+  idempotencyKey?: string; // para evitar duplicados al crear
+}
+
+const AgencySchema = new Schema(
+  {
+    logo: { type: String },
+    plan: {
+      type: String,
+      enum: ["premium", "sponsor", "free"],
+      default: "free",
+      index: true,
+    },
+  },
+  { _id: false }
+);
+
+const ListingSchema = new Schema<IListing>(
   {
     title: { type: String, required: true },
-    location: { type: String, required: true },
-    price: { type: Number, required: true },
-    currency: { type: String, default: "ARS" },
+    location: { type: String, required: true, index: true },
+    price: { type: Number, required: true, index: true },
+    currency: { type: String, enum: ["ARS", "USD"], required: true },
     rooms: { type: Number, default: 0 },
-    description: { type: String, default: "" },
-
     propertyType: {
       type: String,
       enum: ["depto", "casa", "lote", "local"],
@@ -19,37 +51,21 @@ const ListingSchema = new Schema(
       enum: ["venta", "alquiler", "temporario"],
       required: true,
     },
-
     images: { type: [String], default: [] },
-
-    agency: {
-      name: { type: String, default: "" },
-      logo: { type: String, default: "" },
-      plan: {
-        type: String,
-        enum: ["free", "sponsor", "premium"],
-        default: "free",
-      },
-    },
-
-    // ✅ idempotencia: una key única por intento de creación
-    idempotencyKey: { type: String, unique: true, sparse: true },
+    description: { type: String },
+    agency: { type: AgencySchema, default: undefined },
+    idempotencyKey: { type: String, index: true, unique: true, sparse: true },
   },
   { timestamps: true }
 );
 
-// índices útiles para buscar duplicados “por contenido”
-ListingSchema.index({
-  title: 1,
-  location: 1,
-  price: 1,
-  currency: 1,
-  propertyType: 1,
-  operationType: 1,
-});
+// índices útiles
+ListingSchema.index({ createdAt: -1 });
 
-export default models.Listing || mongoose.model("Listing", ListingSchema);
+export const Listing: Model<IListing> =
+  mongoose.models.Listing || mongoose.model<IListing>("Listing", ListingSchema);
 
+export default Listing;
 
 
 

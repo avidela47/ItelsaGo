@@ -1,0 +1,77 @@
+.card {
+  height: var(--card-h, 440px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* 56% arriba imagen, 44% abajo texto – todas iguales */
+.imgBox {
+  position: relative;
+  height: 56%;
+  min-height: 200px;
+  overflow: hidden;
+}
+
+.img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Badges */
+.badgeLeft {
+  position: absolute !important;
+  top: 8px;
+  left: 8px;
+  z-index: 2;
+}
+.badgeRight {
+  position: absolute !important;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+}
+
+/* Logo inmobiliaria */
+.logoBox {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  width: 34px;
+  height: 34px;
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+  z-index: 2;
+}
+.logoImg {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* Cuerpo con altura fija restante */
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  height: 44%;
+  padding: 16px !important; /* fija paddings vs. theme */
+}
+
+/* Título en 2 líneas exactas, evita que unas crezcan más */
+.title {
+  font-weight: 700;
+  line-height: 1.2;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  min-height: 40px; /* asegura mismo alto en todas */
+}
+

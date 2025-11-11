@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import FavButton from "@/components/FavButton";
+import FavButton from "@/components/cards/FavButton";
 
 type ListingItem = {
   id: string;
@@ -11,6 +11,7 @@ type ListingItem = {
   currency: "ARS" | "USD" | string;
   images: string[];
   agency?: { logo?: string; plan?: "free" | "sponsor" | "premium" } | null;
+  createdAt?: string;
 };
 
 const FAV_KEY = "itelsa:favs";
@@ -27,11 +28,18 @@ function money(n: number, currency: string) {
   }
 }
 
+function isNew(createdAt?: string) {
+  if (!createdAt) return false;
+  const t = new Date(createdAt).getTime();
+  if (Number.isNaN(t)) return false;
+  const SEVEN = 7 * 24 * 60 * 60 * 1000;
+  return Date.now() - t < SEVEN;
+}
+
 export default function ListingsGrid({ items }: { items: ListingItem[] }) {
   const [onlyFavs, setOnlyFavs] = useState(false);
   const [favIds, setFavIds] = useState<Set<string>>(new Set());
 
-  // cargar favoritos del localStorage
   useEffect(() => {
     try {
       const raw = localStorage.getItem(FAV_KEY);
@@ -42,10 +50,7 @@ export default function ListingsGrid({ items }: { items: ListingItem[] }) {
     }
   }, []);
 
-  // permitir que el usuario cambie el filtro
-  function toggleOnlyFavs() {
-    setOnlyFavs((v) => !v);
-    // refresco favoritos por si cambiaron desde otra vista
+  function refreshFavs() {
     try {
       const raw = localStorage.getItem(FAV_KEY);
       const map = raw ? (JSON.parse(raw) as Record<string, true>) : {};
@@ -53,27 +58,21 @@ export default function ListingsGrid({ items }: { items: ListingItem[] }) {
     } catch {}
   }
 
-  // filtrar si está activo "solo favoritos"
+  function toggleOnlyFavs() {
+    setOnlyFavs((v) => !v);
+    refreshFavs();
+  }
+
   const visible = useMemo(() => {
     if (!onlyFavs) return items;
     return items.filter((x) => favIds.has(x.id));
   }, [onlyFavs, favIds, items]);
 
-  // contador
   const countFavs = favIds.size;
 
   return (
     <>
-      {/* Toolbar filtro */}
-      <div
-        style={{
-          display: "flex",
-          gap: 12,
-          alignItems: "center",
-          justifyContent: "flex-end",
-          marginBottom: 10,
-        }}
-      >
+      <div style={{ display: "flex", gap: 12, alignItems: "center", justifyContent: "flex-end", marginBottom: 10 }}>
         <button
           onClick={toggleOnlyFavs}
           type="button"
@@ -95,7 +94,6 @@ export default function ListingsGrid({ items }: { items: ListingItem[] }) {
         </button>
       </div>
 
-      {/* Grid */}
       {visible.length === 0 ? (
         <div
           style={{
@@ -106,9 +104,7 @@ export default function ListingsGrid({ items }: { items: ListingItem[] }) {
             textAlign: "center",
           }}
         >
-          {onlyFavs
-            ? "No tenés favoritos guardados."
-            : "No se encontraron publicaciones con esos filtros."}
+          {onlyFavs ? "No tenés favoritos guardados." : "No se encontraron publicaciones con esos filtros."}
         </div>
       ) : (
         <section
@@ -122,6 +118,7 @@ export default function ListingsGrid({ items }: { items: ListingItem[] }) {
             const img = (x.images || [])[0] || "/placeholder.png";
             const isPremium = x.agency?.plan === "premium";
             const isSponsor = x.agency?.plan === "sponsor";
+            const badgeNew = isNew(x.createdAt);
 
             return (
               <a
@@ -138,7 +135,6 @@ export default function ListingsGrid({ items }: { items: ListingItem[] }) {
                   overflow: "hidden",
                   background:
                     "linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.02))",
-                  // ✨ brillos para premium / sponsor
                   boxShadow: isPremium
                     ? "0 0 0 2px rgba(255,213,77,.25), 0 12px 36px rgba(0,0,0,.35)"
                     : isSponsor
@@ -146,25 +142,12 @@ export default function ListingsGrid({ items }: { items: ListingItem[] }) {
                     : "0 10px 28px rgba(0,0,0,.28)",
                 }}
               >
-                <div
-                  style={{
-                    position: "relative",
-                    paddingTop: "62%",
-                    background: "rgba(255,255,255,.04)",
-                  }}
-                >
+                <div style={{ position: "relative", paddingTop: "62%", background: "rgba(255,255,255,.04)" }}>
                   <img
                     src={img}
                     alt={x.title}
                     loading="lazy"
-                    style={{
-                      position: "absolute",
-                      inset: 0,
-                      width: "100%",
-                      height: "100%",
-                      objectFit: "cover",
-                      transform: "translateZ(0)",
-                    }}
+                    style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", transform: "translateZ(0)" }}
                   />
 
                   {/* Logo agencia abajo-izquierda */}
@@ -212,6 +195,26 @@ export default function ListingsGrid({ items }: { items: ListingItem[] }) {
                     </span>
                   ) : null}
 
+                  {/* NUEVO arriba-izquierda */}
+                  {badgeNew ? (
+                    <span
+                      style={{
+                        position: "absolute",
+                        top: 8,
+                        left: 46, // deja lugar al corazón
+                        fontSize: 10,
+                        fontWeight: 900,
+                        padding: "4px 8px",
+                        borderRadius: 999,
+                        background: "#22c55e",
+                        color: "#0b0b0f",
+                        border: "1px solid rgba(0,0,0,.15)",
+                      }}
+                    >
+                      NUEVO
+                    </span>
+                  ) : null}
+
                   {/* Favorito */}
                   <div style={{ position: "absolute", top: 8, left: 8 }}>
                     <FavButton id={x.id} />
@@ -219,19 +222,8 @@ export default function ListingsGrid({ items }: { items: ListingItem[] }) {
                 </div>
 
                 <div style={{ padding: "10px 12px", display: "grid", gap: 6 }}>
-                  <div style={{ fontSize: 18, fontWeight: 800 }}>
-                    {money(x.price, x.currency)}
-                  </div>
-                  <div
-                    style={{
-                      fontSize: 14,
-                      fontWeight: 700,
-                      lineHeight: 1.2,
-                      minHeight: 34,
-                    }}
-                  >
-                    {x.title}
-                  </div>
+                  <div style={{ fontSize: 18, fontWeight: 800 }}>{money(x.price, x.currency)}</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, lineHeight: 1.2, minHeight: 34 }}>{x.title}</div>
                   <div style={{ fontSize: 12, opacity: 0.85 }}>{x.location}</div>
                 </div>
               </a>
@@ -242,3 +234,4 @@ export default function ListingsGrid({ items }: { items: ListingItem[] }) {
     </>
   );
 }
+
