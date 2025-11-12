@@ -62,3 +62,34 @@ export function clearSessionCookie(res: NextResponse) {
   res.cookies.set("session", "", { path: "/", maxAge: 0 });
 }
 
+// Obtener agencia/usuario desde una Request o NextRequest
+import Agency from "@/models/Agency";
+import { dbConnect } from "@/lib/mongo";
+
+export async function getAgencyFromRequest(req: any) {
+  // Intentar leer token de cookies (NextRequest tiene req.cookies.get)
+  let token: string | undefined = undefined;
+  try {
+    token = req?.cookies?.get?.("session")?.value;
+  } catch {}
+
+  // Si no vino en cookies, intentar leer header 'cookie' (Request)
+  if (!token) {
+    const cookieHeader = req?.headers?.get?.("cookie") || req?.headers?.cookie || "";
+    for (const part of cookieHeader.split(";")) {
+      const [k, v] = part.split("=");
+      if (k && k.trim() === "session") {
+        token = (v || "").trim();
+        break;
+      }
+    }
+  }
+
+  const session = verifySession(token);
+  if (!session) return null;
+
+  await dbConnect();
+  const ag = await Agency.findById(session.uid).lean();
+  return ag;
+}
+
