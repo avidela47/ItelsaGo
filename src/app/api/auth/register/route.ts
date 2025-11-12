@@ -1,26 +1,40 @@
 import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import bcrypt from "bcryptjs";
+import User from "@/models/User";
 import { dbConnect } from "@/lib/mongo";
-import Agency from "@/models/Agency";
-import { hashPassword, signToken, setTokenCookie } from "@/lib/auth";
 
-export async function POST(request: Request) {
-  await dbConnect();
-  const body = await request.json();
-  const { name, email, password, phone, contactEmail } = body || {};
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const email: string = (body?.email || "").toLowerCase().trim();
+    const password: string = body?.password || "";
+    const name: string = (body?.name || "").trim();
 
-  if (!name || !email || !password) {
-    return NextResponse.json({ error: "Missing fields" }, { status: 400 });
+    if (!email || !password) {
+      return NextResponse.json({ ok: false, error: "Email y contraseña requeridos" }, { status: 400 });
+    }
+
+    await dbConnect();
+
+    // si no hay ningún usuario admin, el primero que se registre será admin
+    const adminExists = await User.exists({ role: "admin" });
+    const userExists = await User.findOne({ email });
+    if (userExists) {
+      return NextResponse.json({ ok: false, error: "Email ya registrado" }, { status: 400 });
+    }
+
+    const passwordHash = await bcrypt.hash(password, 12);
+    const role = adminExists ? "user" : "admin";
+
+    const user = await User.create({ email, passwordHash, name, role });
+
+    return NextResponse.json({
+      ok: true,
+      user: { id: user._id.toString(), email: user.email, name: user.name, role: user.role },
+      info: !adminExists ? "Primer usuario es ADMIN" : undefined,
+    });
+  } catch (e: any) {
+    return NextResponse.json({ ok: false, error: "Error al registrar" }, { status: 500 });
   }
-
-  const existing = await Agency.findOne({ email: email.toLowerCase().trim() });
-  if (existing) return NextResponse.json({ error: "Email already in use" }, { status: 409 });
-
-  const passwordHash = await hashPassword(password);
-  const agency = new Agency({ name: name.trim(), email: email.toLowerCase().trim(), passwordHash, phone: phone || "", contactEmail: contactEmail || "" });
-  await agency.save();
-
-  const token = signToken({ id: String(agency._id), role: agency.role });
-  const res = NextResponse.json({ id: String(agency._id), name: agency.name, email: agency.email });
-  setTokenCookie(res, token);
-  return res;
 }

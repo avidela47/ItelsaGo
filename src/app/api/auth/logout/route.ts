@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
-import { clearTokenCookie } from "@/lib/auth";
+import type { NextRequest } from "next/server";
+import { clearSessionCookie } from "@/lib/auth";
 
-export async function POST() {
+export async function POST(_req: NextRequest) {
   const res = NextResponse.json({ ok: true });
-  clearTokenCookie(res);
+  clearSessionCookie(res);
   return res;
 }

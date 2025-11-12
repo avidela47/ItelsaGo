@@ -16,7 +16,7 @@
     "bcryptjs": "^2.4.3",
     "cookie": "^0.5.0",
     "formidable": "^3.5.4",
-    "jsonwebtoken": "^9.0.0",
+    "jsonwebtoken": "^9.0.2",
     "mime": "^4.1.0",
     "mongoose": "^8.19.3",
     "next": "14.2.10",

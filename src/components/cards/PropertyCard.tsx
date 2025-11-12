@@ -1,9 +1,12 @@
 "use client";
 
-import styles from "./PropertyCard.module.css";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
-import Link from "next/link";
+import Chip from "@mui/material/Chip";
+import Button from "@mui/material/Button";
+import WhatsAppIcon from "@mui/icons-material/WhatsApp";
+
+type Plan = "premium" | "sponsor" | "free";
 
 type Item = {
   _id: string;
@@ -13,62 +16,191 @@ type Item = {
   location: string;
   images: string[];
   rooms?: number;
-  propertyType?: "depto" | "casa" | "lote" | "local";
-  agency?: { logo?: string; plan?: "premium" | "sponsor" | "free" };
+  propertyType?: string;
+  agency?: { logo?: string; plan?: Plan; whatsapp?: string };
   createdAt?: string;
 };
 
-function fmtCurrency(n: number, cur: "ARS" | "USD") {
-  const prefix = cur === "USD" ? "USD " : "$ ";
-  return `${prefix}${new Intl.NumberFormat("es-AR").format(n)}`;
-}
-
-function isNuevo(createdAt?: string) {
-  if (!createdAt) return false;
-  const d = Date.parse(createdAt);
-  return !Number.isNaN(d) && Date.now() - d <= 30 * 24 * 60 * 60 * 1000;
+function money(n: number, currency: string) {
+  try {
+    return new Intl.NumberFormat("es-AR", {
+      style: "currency",
+      currency: currency === "USD" ? "USD" : "ARS",
+      maximumFractionDigits: 0,
+    }).format(n);
+  } catch {
+    return `${currency} ${n.toLocaleString("es-AR")}`;
+  }
 }
 
 export default function PropertyCard({ item }: { item: Item }) {
+  const isNuevo = (() => {
+    if (!item?.createdAt) return false;
+    const d = Date.parse(item.createdAt);
+    return Date.now() - d < 1000 * 60 * 60 * 24 * 30; // 30 días
+  })();
+
   const img = item.images?.[0] || "/placeholder.jpg";
-  const plan = (item.agency?.plan || "free").toUpperCase(); // PREMIUM / SPONSOR / FREE
-  const nuevo = isNuevo(item.createdAt);
+  const url = `/inmuebles/${item._id}`;
+
+  const waHref = (() => {
+    const number = item?.agency?.whatsapp?.replace(/[^\d+]/g, "") || "";
+    const base = number ? `https://wa.me/${number}` : `https://wa.me/`;
+    const text = encodeURIComponent(`Hola, me interesa: ${item.title} – ${money(item.price, item.currency)} – ${item.location}`);
+    return `${base}?text=${text}`;
+  })();
 
   return (
-    <Link href={`/inmuebles/${item._id}`} className={styles.card}>
-      <div className={styles.media}>
-        {/* La imagen queda SIEMPRE contenida a 220px con object-fit:cover */}
-        <img src={img} alt={item.title} loading="lazy" />
-        <span className={styles.badgePlan}>{plan}</span>
-        {nuevo && <span className={styles.badgeNuevo}>NUEVO</span>}
-      </div>
+    <Box
+      component="a"
+      href={url}
+      sx={{
+        textDecoration: "none",
+        "&:hover": { textDecoration: "none", transform: "translateY(-3px)", boxShadow: "0 16px 30px rgba(0,0,0,.28)" },
+        borderRadius: 2,
+        border: "1px solid rgba(255,255,255,.12)",
+        background: "linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.03))",
+        boxShadow: "0 10px 24px rgba(0,0,0,.20)",
+        overflow: "hidden",
+        display: "flex",
+        flexDirection: "column",
+        transition: "transform .18s ease, box-shadow .18s ease",
+      }}
+      aria-label={item.title}
+    >
+      {/* FOTO */}
+      <Box sx={{ position: "relative", width: "100%", aspectRatio: "16/10", overflow: "hidden" }}>
+        <img
+          src={img}
+          alt={item.title}
+          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
+        />
 
-      <div className={styles.content}>
-        <Typography className={styles.price} variant="h6">
-          {fmtCurrency(item.price, item.currency || "USD")}
+        {/* BADGE NUEVO → ARRIBA IZQUIERDA */}
+        {isNuevo && (
+          <Box sx={{ position: "absolute", top: 8, left: 8 }}>
+            <Chip
+              label="NUEVO"
+              size="small"
+              color="success"
+              sx={{ fontWeight: 800, height: 20, fontSize: 11, px: 0.6 }}
+            />
+          </Box>
+        )}
+
+        {/* BADGE PLAN → ARRIBA DERECHA */}
+        {item.agency?.plan && (
+          <Box sx={{ position: "absolute", top: 8, right: 8 }}>
+            <Chip
+              label={item.agency.plan.toUpperCase()}
+              size="small"
+              color={
+                item.agency.plan === "premium" ? "warning" :
+                item.agency.plan === "sponsor" ? "info" : "default"
+              }
+              sx={{ fontWeight: 800, height: 20, fontSize: 11, px: 0.6 }}
+            />
+          </Box>
+        )}
+
+        {/* LOGO AGENCIA → ABAJO IZQUIERDA */}
+        {item.agency?.logo && (
+          <Box
+            sx={{
+              position: "absolute",
+              bottom: 8,
+              left: 8,
+              px: 0.6,
+              py: 0.4,
+              borderRadius: 1,
+              background: "rgba(255,255,255,.95)",
+              border: "1px solid rgba(0,0,0,.12)",
+            }}
+          >
+            <img
+              src={item.agency.logo}
+              alt="logo-inmobiliaria"
+              style={{ width: 30, height: 30, objectFit: "contain" }}
+            />
+          </Box>
+        )}
+      </Box>
+
+      {/* BODY */}
+      <Box sx={{ flex: 1, display: "flex", flexDirection: "column", p: 1.8, gap: 0.6 }}>
+        {/* PRECIO */}
+        <Typography variant="h6" fontWeight={900} sx={{ lineHeight: 1.1 }}>
+          {money(item.price, item.currency)}
         </Typography>
 
-        <Typography className={styles.title}>{item.title}</Typography>
+        {/* TÍTULO → 2 líneas fijas */}
+        <Typography
+          sx={{
+            opacity: 0.9,
+            fontSize: 15,
+            fontWeight: 700,
+            lineHeight: 1.25,
+            height: "2.5em",                 // 2 líneas
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            display: "-webkit-box",
+            WebkitLineClamp: "2",
+            WebkitBoxOrient: "vertical",
+          }}
+          title={item.title}
+        >
+          {item.title}
+        </Typography>
 
-        <Box className={styles.meta}>
-          <span>{item.location}</span>
-          {typeof item.rooms === "number" && <span>{item.rooms} amb</span>}
-          {item.propertyType && (
-            <span>
-              {item.propertyType === "depto"
-                ? "Departamento"
-                : item.propertyType === "casa"
-                ? "Casa"
-                : item.propertyType === "lote"
-                ? "Lote"
-                : "Local"}
-            </span>
-          )}
-        </Box>
-      </div>
-    </Link>
+        {/* UBICACIÓN → 1 línea */}
+        <Typography
+          sx={{
+            opacity: 0.65,
+            fontSize: 13,
+            height: "1.3em",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+          title={item.location}
+        >
+          {item.location}
+        </Typography>
+
+        {/* ROOMS (opcional) */}
+        {typeof item.rooms === "number" && (
+          <Typography sx={{ opacity: 0.65, fontSize: 13 }}>{item.rooms} amb.</Typography>
+        )}
+
+        {/* FILL para empujar botón y fijar altura */}
+        <Box sx={{ flex: 1 }} />
+
+        {/* BOTÓN WHATSAPP fijo abajo */}
+        <Button
+          variant="contained"
+          fullWidth
+          size="small"
+          startIcon={<WhatsAppIcon />}
+          sx={{
+            background: "#128C7E",
+            "&:hover": { background: "#0F776C" },
+            textTransform: "none",
+            fontWeight: 800,
+          }}
+          onClick={(e) => {
+            e.preventDefault();
+            window.open(waHref, "_blank");
+          }}
+        >
+          WhatsApp
+        </Button>
+      </Box>
+    </Box>
   );
 }
+
+
+
 
 
 

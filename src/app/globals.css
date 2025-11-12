@@ -32,6 +32,26 @@ a:hover {
   text-decoration: none !important;
 }
 
+/* Evita subrayado en tarjetas de propiedad */
+a[class*="card"]:hover,
+a[class*="card"]:focus,
+a[class*="card"]:active,
+a[class*="PropertyCard"]:hover,
+a[class*="PropertyCard"]:focus,
+a[class*="PropertyCard"]:active {
+  text-decoration: none !important;
+}
+
+/* Evita subrayado en botones MUI */
+button:hover,
+button:focus,
+button:active,
+.MuiButton-root:hover,
+.MuiButton-root:focus,
+.MuiButton-root:active {
+  text-decoration: none !important;
+}
+
 /* Utils */
 .mt-1 {
   margin-top: 4px;

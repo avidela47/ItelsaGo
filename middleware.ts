@@ -1,36 +1,28 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { verifySession } from "./src/lib/auth";
 
-const ADMIN_PATHS = [
-  "/panel",
-  "/publicar",
-];
+export const config = {
+  matcher: [
+    "/panel/:path*",
+    "/publicar",
+    // Agregá otras rutas privadas si querés
+  ],
+};
 
-export function middleware(req: NextRequest) {
-  const { pathname } = req.nextUrl;
-  const role = req.cookies.get("role")?.value || "guest";
+export default function middleware(req: NextRequest) {
+  const token = req.cookies.get("session")?.value;
+  const session = verifySession(token);
+  const isAdmin = !!session && session.role === "admin";
 
-  // Protegemos también /inmuebles/[id]/editar
-  const isEditInmueble =
-    pathname.startsWith("/inmuebles/") && pathname.endsWith("/editar");
-
-  const needsAdmin =
-    ADMIN_PATHS.some((p) => pathname.startsWith(p)) || isEditInmueble;
-
-  if (needsAdmin && role !== "admin") {
+  if (!isAdmin) {
     const url = req.nextUrl.clone();
-    url.pathname = "/auth/login";
-    url.searchParams.set("next", pathname);
+    url.pathname = "/login";
+    url.searchParams.set("next", req.nextUrl.pathname);
     return NextResponse.redirect(url);
   }
 
   return NextResponse.next();
 }
 
-export const config = {
-  matcher: [
-    "/panel/:path*",
-    "/publicar",
-    "/inmuebles/:id/editar",
-  ],
-};
+

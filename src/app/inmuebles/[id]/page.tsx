@@ -53,6 +53,7 @@ export default function InmueblePage() {
   const [similar, setSimilar] = useState<Item[]>([]);
   const [simErr, setSimErr] = useState<string | null>(null);
 
+  // Fetch del item
   useEffect(() => {
     let ok = true;
     (async () => {
@@ -74,6 +75,7 @@ export default function InmueblePage() {
     return () => { ok = false; };
   }, [id]);
 
+  // Similares por ubicación
   useEffect(() => {
     if (!item?.location) return;
     let ok = true;
@@ -92,25 +94,31 @@ export default function InmueblePage() {
     return () => { ok = false; };
   }, [item?._id, item?.location]);
 
+  // Imágenes seguras
   const imgs = useMemo(() => {
     const arr = Array.isArray(item?.images) ? item!.images.filter(Boolean) : [];
     return arr.length ? arr : ["/placeholder.jpg"];
   }, [item?.images]);
 
+  // Precio formateado
   const priceLabel = useMemo(() => {
     if (!item) return "";
     const p = new Intl.NumberFormat("es-AR").format(item.price || 0);
     return `${item.currency === "USD" ? "USD" : "ARS"} ${p}`;
   }, [item]);
 
+  // NUEVO: 30 días
   const isNuevo = useMemo(() => {
     if (!item?.createdAt) return false;
     const d = Date.parse(item.createdAt);
-    return Date.now() - d < 1000 * 60 * 60 * 24 * 30; // 30 días
+    return Date.now() - d < 1000 * 60 * 60 * 24 * 30;
   }, [item?.createdAt]);
 
+  // Links contacto
   function waLink() {
-    const number = item?.agency?.whatsapp || item?.agency?.phone || "";
+    const raw = item?.agency?.whatsapp || item?.agency?.phone || "";
+    // saneo: dejo + y dígitos
+    const number = raw.replace(/[^\d+]/g, "");
     const base = number ? `https://wa.me/${number}` : `https://wa.me/`;
     const text = encodeURIComponent(
       `Hola, me interesa el inmueble:\n${item?.title} – ${priceLabel}\n${item?.location}\n${typeof window !== "undefined" ? window.location.href : ""}`
@@ -118,7 +126,7 @@ export default function InmueblePage() {
     return `${base}?text=${text}`;
   }
   function telLink() {
-    const number = item?.agency?.phone?.replace(/\s|-/g, "") || "";
+    const number = (item?.agency?.phone || "").replace(/[^\d+]/g, "");
     return number ? `tel:${number}` : undefined;
   }
 
@@ -141,72 +149,104 @@ export default function InmueblePage() {
     );
   }
 
+  // Seguridad por si idx queda fuera de rango
+  const safeIdx = Math.min(Math.max(idx, 0), imgs.length - 1);
+
   return (
     <main style={{ padding: "24px 16px", maxWidth: 1200, margin: "0 auto" }}>
+      {/* Toolbar superior */}
       <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
         <Button size="small" onClick={() => router.back()} sx={{ textTransform: "none" }}>← Volver</Button>
         <Box sx={{ ml: "auto", display: "flex", gap: 1 }}>
-          <Button size="small" variant="outlined" startIcon={<FavoriteBorderIcon />}>Guardar</Button>
+          <Button size="small" variant="outlined" startIcon={<FavoriteBorderIcon />}>
+            Guardar
+          </Button>
         </Box>
       </Box>
 
       {/* Layout 2 columnas */}
-      <Box sx={{
-        display: "grid",
-        gridTemplateColumns: { xs: "1fr", md: "1.4fr 0.8fr" },
-        gap: 3,
-        alignItems: "start",
-      }}>
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: { xs: "1fr", md: "1.4fr 0.8fr" },
+          gap: 3,
+          alignItems: "start",
+        }}
+      >
         {/* Galería */}
         <Box>
-          {/* Contenedor con RATIO para NO explotar la foto */}
-          <Box sx={{
-            position: "relative",
-            width: "100%",
-            maxWidth: "100%",
-            aspectRatio: "16/10",
-            borderRadius: 2,
-            overflow: "hidden",
-            border: "1px solid rgba(255,255,255,.10)",
-            background: "rgba(255,255,255,.03)",
-          }}>
+          {/* Contenedor con ratio fijo (foto NO gigante) */}
+          <Box
+            sx={{
+              position: "relative",
+              width: "100%",
+              maxWidth: "100%",
+              aspectRatio: "16/10",
+              borderRadius: 2,
+              overflow: "hidden",
+              border: "1px solid rgba(255,255,255,.10)",
+              background: "rgba(255,255,255,.03)",
+            }}
+          >
             <img
-              src={imgs[idx]}
+              src={imgs[safeIdx]}
               alt={item.title}
               style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
             />
 
-            {/* BADGES sobre la foto: NUEVO + PLAN + LOGO */}
-            <Box sx={{ position: "absolute", top: 8, left: 8, display: "flex", gap: 1 }}>
-              {isNuevo && <Chip label="NUEVO" size="small" color="success" sx={{ fontWeight: 700 }} />}
+            {/* BADGES: arriba a la derecha (chicos) */}
+            <Box sx={{ position: "absolute", top: 8, right: 8, display: "flex", gap: 1 }}>
+              {isNuevo && (
+                <Chip
+                  label="NUEVO"
+                  size="small"
+                  color="success"
+                  sx={{ fontWeight: 800, opacity: 0.95 }}
+                />
+              )}
               {item.agency?.plan && (
                 <Chip
                   label={(item.agency.plan as string).toUpperCase()}
                   size="small"
                   color={item.agency.plan === "premium" ? "warning" : item.agency.plan === "sponsor" ? "info" : "default"}
-                  sx={{ fontWeight: 700 }}
+                  sx={{ fontWeight: 800, opacity: 0.95 }}
+                  title={`Plan: ${item.agency.plan}`}
                 />
               )}
             </Box>
+
+            {/* Logo inmobiliaria abajo a la izquierda */}
             {item.agency?.logo && (
-              <Box sx={{
-                position: "absolute", bottom: 8, left: 8,
-                p: 0.5, borderRadius: 1, background: "rgba(255,255,255,.95)",
-                border: "1px solid rgba(0,0,0,.15)"
-              }}>
-                <img src={item.agency.logo} alt="logo-inmo" style={{ width: 34, height: 34, objectFit: "contain" }} />
+              <Box
+                sx={{
+                  position: "absolute",
+                  bottom: 8,
+                  left: 8,
+                  p: 0.5,
+                  borderRadius: 1,
+                  background: "rgba(255,255,255,.96)",
+                  border: "1px solid rgba(0,0,0,.15)",
+                }}
+              >
+                <img
+                  src={item.agency.logo}
+                  alt="logo-inmo"
+                  style={{ width: 36, height: 36, objectFit: "contain" }}
+                />
               </Box>
             )}
           </Box>
 
           {/* Miniaturas */}
           {imgs.length > 1 && (
-            <Box sx={{
-              mt: 1.5,
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(92px, 1fr))",
-              gap: 1,
-            }}>
+            <Box
+              sx={{
+                mt: 1.5,
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fill, minmax(92px, 1fr))",
+                gap: 1,
+              }}
+            >
               {imgs.map((src, i) => (
                 <button
                   key={i}
@@ -216,7 +256,7 @@ export default function InmueblePage() {
                     paddingTop: "62%",
                     borderRadius: 10,
                     overflow: "hidden",
-                    border: i === idx ? "2px solid #00D084" : "1px solid rgba(255,255,255,.12)",
+                    border: i === safeIdx ? "2px solid #00D084" : "1px solid rgba(255,255,255,.12)",
                     background: "rgba(255,255,255,.03)",
                     cursor: "pointer",
                   }}
@@ -244,10 +284,12 @@ export default function InmueblePage() {
             </Box>
           )}
 
-          {/* Mapa opcional */}
+          {/* Mapa (opcional) */}
           {typeof item.lat === "number" && typeof item.lng === "number" && (
             <Box sx={{ mt: 3 }}>
-              <Typography variant="h6" fontWeight={700} sx={{ mb: 1 }}>Ubicación</Typography>
+              <Typography variant="h6" fontWeight={700} sx={{ mb: 1 }}>
+                Ubicación
+              </Typography>
               <Box sx={{ borderRadius: 2, overflow: "hidden", border: "1px solid rgba(255,255,255,.1)" }}>
                 <iframe
                   title="map"
@@ -266,11 +308,14 @@ export default function InmueblePage() {
 
         {/* Sidebar */}
         <Box sx={{ position: { md: "sticky" }, top: { md: 16 }, display: "grid", gap: 2 }}>
-          <Box sx={{
-            p: 2, borderRadius: 2,
-            border: "1px solid rgba(255,255,255,.12)",
-            background: "linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.02))",
-          }}>
+          <Box
+            sx={{
+              p: 2,
+              borderRadius: 2,
+              border: "1px solid rgba(255,255,255,.12)",
+              background: "linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.02))",
+            }}
+          >
             <Typography variant="h4" fontWeight={900} sx={{ lineHeight: 1 }}>
               {priceLabel}
             </Typography>
@@ -291,7 +336,14 @@ export default function InmueblePage() {
             </Box>
 
             <Box sx={{ display: "flex", gap: 1.2, mt: 2 }}>
-              <Button fullWidth variant="contained" startIcon={<WhatsAppIcon />} href={waLink()} target="_blank" rel="noopener noreferrer">
+              <Button
+                fullWidth
+                variant="contained"
+                startIcon={<WhatsAppIcon />}
+                href={waLink()}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
                 WhatsApp
               </Button>
               <Button fullWidth variant="outlined" startIcon={<PhoneIcon />} href={telLink()} disabled={!telLink()}>
@@ -300,22 +352,35 @@ export default function InmueblePage() {
             </Box>
           </Box>
 
-          <Box sx={{
-            p: 2, borderRadius: 2,
-            border: "1px solid rgba(255,255,255,.12)",
-            background: "linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.02))",
-            display: "flex", alignItems: "center", gap: 1.2,
-          }}>
+          <Box
+            sx={{
+              p: 2,
+              borderRadius: 2,
+              border: "1px solid rgba(255,255,255,.12)",
+              background: "linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.02))",
+              display: "flex",
+              alignItems: "center",
+              gap: 1.2,
+            }}
+          >
             {item.agency?.logo && (
               <img
                 src={item.agency.logo}
                 alt="logo-agencia"
-                style={{ width: 44, height: 44, objectFit: "contain", borderRadius: 8, padding: 2, background: "rgba(255,255,255,.95)", border: "1px solid rgba(0,0,0,.15)" }}
+                style={{
+                  width: 44,
+                  height: 44,
+                  objectFit: "contain",
+                  borderRadius: 8,
+                  padding: 2,
+                  background: "rgba(255,255,255,.95)",
+                  border: "1px solid rgba(0,0,0,.15)",
+                }}
               />
             )}
             <Box sx={{ minWidth: 0 }}>
               <Typography fontWeight={700}>{item.agency?.name || "Inmobiliaria"}</Typography>
-              <Box sx={{ display: "flex", alignItems: "center", gap: .8, mt: .2 }}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 0.8, mt: 0.2 }}>
                 {item.agency?.plan && (
                   <Chip
                     label={item.agency.plan.toUpperCase()}
@@ -323,7 +388,9 @@ export default function InmueblePage() {
                     color={item.agency.plan === "premium" ? "warning" : item.agency.plan === "sponsor" ? "info" : "default"}
                   />
                 )}
-                {item.agency?.phone && <Typography sx={{ opacity: .75, fontSize: 13 }}>{item.agency.phone}</Typography>}
+                {item.agency?.phone && (
+                  <Typography sx={{ opacity: 0.75, fontSize: 13 }}>{item.agency.phone}</Typography>
+                )}
               </Box>
             </Box>
           </Box>
@@ -336,16 +403,20 @@ export default function InmueblePage() {
           Propiedades similares en {item.location}
         </Typography>
         {simErr ? (
-          <Typography sx={{ opacity: .7 }}>{simErr}</Typography>
+          <Typography sx={{ opacity: 0.7 }}>{simErr}</Typography>
         ) : similar.length === 0 ? (
-          <Typography sx={{ opacity: .7 }}>No encontramos similares.</Typography>
+          <Typography sx={{ opacity: 0.7 }}>No encontramos similares.</Typography>
         ) : (
-          <Box sx={{
-            display: "grid",
-            gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)", md: "repeat(3, 1fr)", lg: "repeat(4, 1fr)" },
-            gap: 3,
-          }}>
-            {similar.map(s => <PropertyCard key={s._id} item={s} />)}
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)", md: "repeat(3, 1fr)", lg: "repeat(4, 1fr)" },
+              gap: 3,
+            }}
+          >
+            {similar.map((s) => (
+              <PropertyCard key={s._id} item={s} />
+            ))}
           </Box>
         )}
       </Box>
@@ -366,9 +437,6 @@ function labelOp(o?: Item["operationType"]) {
   if (o === "temporario") return "Temporario";
   return "Operación";
 }
-
-
-
 
 
 

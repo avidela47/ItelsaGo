@@ -16,7 +16,7 @@ import Chip from "@mui/material/Chip";
 import DeleteRoundedIcon from "@mui/icons-material/DeleteRounded";
 import EditRoundedIcon from "@mui/icons-material/EditRounded";
 import CircularProgress from "@mui/material/CircularProgress";
-import ConfirmDeleteDialog from "@/components/ConfirmDeleteDialog";
+import ConfirmDeleteDialog from "@/components/cards/ConfirmDeleteDialog";
 
 type Item = {
   _id: string;
