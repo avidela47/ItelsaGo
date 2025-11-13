@@ -10,15 +10,24 @@ import Typography from "@mui/material/Typography";
 import Alert from "@mui/material/Alert";
 import CircularProgress from "@mui/material/CircularProgress";
 
-type Role = "guest" | "user" | "inmobiliaria" | "admin";
-type Plan = "free" | "sponsor" | "premium";
+type Role = "guest" | "user" | "agency" | "admin";
+type Plan = "free" | "pro" | "premium";
 type PropertyType = "depto" | "casa" | "lote" | "local";
 
 function getRoleFromCookie(): Role {
   if (typeof document === "undefined") return "guest";
+  
+  // Primero intentar leer de localStorage (usado en login)
+  const localRole = window.localStorage.getItem("role");
+  if (localRole === "admin" || localRole === "user" || localRole === "agency") {
+    return localRole;
+  }
+  
+  // Si no está en localStorage, intentar con cookies
   const match = document.cookie.match(/(?:^|;)\s*role=([^;]+)/);
   const value = match ? decodeURIComponent(match[1]) : "";
-  if (value === "admin" || value === "user" || value === "inmobiliaria") return value;
+  if (value === "admin" || value === "user" || value === "agency") return value;
+  
   return "guest";
 }
 
@@ -44,7 +53,7 @@ export default function PublicarPage() {
     const r = getRoleFromCookie();
     setRole(r);
     setLoading(false);
-    if (r !== "admin" && r !== "inmobiliaria") {
+    if (r !== "admin" && r !== "agency") {
       router.replace("/login?from=publicar");
     }
   }, [router]);
@@ -114,7 +123,7 @@ export default function PublicarPage() {
     );
   }
 
-  if (role !== "admin" && role !== "inmobiliaria") {
+  if (role !== "admin" && role !== "agency") {
     return (
       <main style={{ padding: "24px 16px", maxWidth: 900, margin: "0 auto" }}>
         <Alert severity="error">
@@ -215,7 +224,7 @@ export default function PublicarPage() {
             fullWidth
           >
             <MenuItem value="free">FREE</MenuItem>
-            <MenuItem value="sponsor">SPONSOR</MenuItem>
+            <MenuItem value="pro">PRO</MenuItem>
             <MenuItem value="premium">PREMIUM</MenuItem>
           </TextField>
         )}

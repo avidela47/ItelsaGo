@@ -1,6 +1,6 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 
-export type UserRole = "user" | "inmobiliaria" | "admin";
+export type UserRole = "user" | "agency" | "admin";
 
 export interface IUser extends Document {
   name?: string;
@@ -18,8 +18,8 @@ const UserSchema = new Schema<IUser>(
     password: { type: String, required: true },
     role: {
       type: String,
-      enum: ["user", "inmobiliaria", "admin"],
-      default: "user", // 👈 todos los registros nuevos entran como user
+      enum: ["user", "agency", "admin"],
+      default: "user",
     },
   },
   {
@@ -27,8 +27,12 @@ const UserSchema = new Schema<IUser>(
   }
 );
 
-const User: Model<IUser> =
-  mongoose.models.User || mongoose.model<IUser>("User", UserSchema);
+// Eliminar modelo cacheado si existe para forzar actualización del schema
+if (mongoose.models.User) {
+  delete mongoose.models.User;
+}
+
+const User: Model<IUser> = mongoose.model<IUser>("User", UserSchema);
 
 export default User;
 

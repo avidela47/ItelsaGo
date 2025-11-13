@@ -23,7 +23,7 @@ type Item = {
   images: string[];
   rooms?: number;
   propertyType?: "depto" | "casa" | "lote" | "local";
-  agency?: { logo?: string; plan?: "premium" | "sponsor" | "free" };
+  agency?: { logo?: string; plan?: "premium" | "sponsor" | "pro" | "free" };
   createdAt?: string;
 };
 

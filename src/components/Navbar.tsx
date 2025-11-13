@@ -8,8 +8,20 @@ export default function Navbar() {
   const [role, setRole] = useState<string | null>(null);
 
   useEffect(() => {
-    const r = window.localStorage.getItem("role");
-    setRole(r);
+    // Leer rol del localStorage
+    const checkRole = () => {
+      const r = window.localStorage.getItem("role");
+      setRole(r);
+    };
+    
+    checkRole();
+    
+    // Escuchar cambios en localStorage
+    window.addEventListener("storage", checkRole);
+    
+    return () => {
+      window.removeEventListener("storage", checkRole);
+    };
   }, []);
 
   // BOTÓN VERDE ITELSA
@@ -83,7 +95,7 @@ export default function Navbar() {
           </button>
         )}
 
-        {role === "inmobiliaria" && (
+        {role === "agency" && (
           <>
             <Link
               href="/publicar"

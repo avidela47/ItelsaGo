@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   Box,
@@ -10,6 +10,7 @@ import {
   Paper,
   Alert,
   MenuItem,
+  Link,
 } from "@mui/material";
 
 export default function RegisterPage() {
@@ -17,11 +18,21 @@ export default function RegisterPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<"admin" | "user">("user");
+  const [role, setRole] = useState<"user" | "agency">("user");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ type: "ok" | "err"; text: string } | null>(
     null
   );
+
+  // Remover scroll del body
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = "";
+      document.documentElement.style.overflow = "";
+    };
+  }, []);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -53,11 +64,13 @@ export default function RegisterPage() {
   return (
     <main
       style={{
-        minHeight: "100vh",
+        height: "100vh",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
         padding: 16,
+        overflow: "hidden",
+        paddingBottom: "15vh",
       }}
     >
       <Paper
@@ -72,9 +85,16 @@ export default function RegisterPage() {
           border: "1px solid rgba(255,255,255,.08)",
         }}
       >
-        <Typography variant="h6" fontWeight={800} sx={{ mb: 2, textAlign: "center" }}>
-          Crear usuario
-        </Typography>
+        <Box sx={{ textAlign: "center", mb: 3 }}>
+          <img
+            src="/logo-itelsa-go.svg"
+            alt="ITELSA Go"
+            style={{ height: 48, marginBottom: 16 }}
+          />
+          <Typography variant="h5">
+            Crear usuario
+          </Typography>
+        </Box>
 
         {msg && (
           <Alert
@@ -114,16 +134,35 @@ export default function RegisterPage() {
             label="Rol"
             fullWidth
             value={role}
-            onChange={(e) => setRole(e.target.value as "admin" | "user")}
+            onChange={(e) => setRole(e.target.value as "user" | "agency")}
           >
             <MenuItem value="user">Usuario</MenuItem>
-            <MenuItem value="admin">Admin</MenuItem>
+            <MenuItem value="agency">Inmobiliaria</MenuItem>
           </TextField>
 
           <Button type="submit" disabled={busy} variant="contained" fullWidth>
             {busy ? "Creando..." : "Crear usuario"}
           </Button>
         </form>
+
+        <Box sx={{ textAlign: "center", mt: 2 }}>
+          <Typography variant="body2" sx={{ opacity: 0.7 }}>
+            ¿Ya tienes cuenta?{" "}
+            <Link
+              href="/login"
+              sx={{
+                color: "#00d0ff",
+                textDecoration: "none",
+                fontWeight: 600,
+                "&:hover": {
+                  textDecoration: "underline",
+                },
+              }}
+            >
+              Ingresar
+            </Link>
+          </Typography>
+        </Box>
       </Paper>
     </main>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   Box,
@@ -11,6 +11,7 @@ import {
   Alert,
   FormControlLabel,
   Switch,
+  Link,
 } from "@mui/material";
 
 export default function LoginPage() {
@@ -20,6 +21,16 @@ export default function LoginPage() {
   const [inviteMode, setInviteMode] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
+
+  // Remover scroll del body
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = "";
+      document.documentElement.style.overflow = "";
+    };
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -46,10 +57,15 @@ export default function LoginPage() {
         return;
       }
 
+      // Guardar el rol en localStorage
+      if (data.role) {
+        localStorage.setItem("role", data.role);
+      }
+
       setMsg({ type: "ok", text: "Sesión iniciada" });
 
       setTimeout(() => {
-        router.push("/inmuebles");
+        window.location.href = "/inmuebles"; // Recarga completa para actualizar el Navbar
       }, 400);
     } catch {
       setMsg({ type: "err", text: "Error de red" });
@@ -61,11 +77,13 @@ export default function LoginPage() {
   return (
     <main
       style={{
-        minHeight: "100vh",
+        height: "100vh",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
         padding: 16,
+        overflow: "hidden",
+        paddingBottom: "15vh",
       }}
     >
       <Paper
@@ -80,14 +98,14 @@ export default function LoginPage() {
           border: "1px solid rgba(255,255,255,.08)",
         }}
       >
-        <Box sx={{ textAlign: "center", mb: 2 }}>
+        <Box sx={{ textAlign: "center", mb: 3 }}>
           <img
             src="/logo-itelsa-go.svg"
             alt="ITELSA Go"
-            style={{ height: 36, marginBottom: 8 }}
+            style={{ height: 48, marginBottom: 16 }}
           />
-          <Typography variant="h6" fontWeight={800}>
-            Ingresar a ITELSA Go
+          <Typography variant="h5">
+            Ingresar
           </Typography>
         </Box>
 
@@ -140,6 +158,25 @@ export default function LoginPage() {
             {busy ? "Ingresando..." : inviteMode ? "Entrar como invitado" : "Iniciar sesión"}
           </Button>
         </form>
+
+        <Box sx={{ textAlign: "center", mt: 2 }}>
+          <Typography variant="body2" sx={{ opacity: 0.7 }}>
+            ¿No tienes cuenta?{" "}
+            <Link
+              href="/register"
+              sx={{
+                color: "#00d0ff",
+                textDecoration: "none",
+                fontWeight: 600,
+                "&:hover": {
+                  textDecoration: "underline",
+                },
+              }}
+            >
+              Regístrate
+            </Link>
+          </Typography>
+        </Box>
       </Paper>
     </main>
   );

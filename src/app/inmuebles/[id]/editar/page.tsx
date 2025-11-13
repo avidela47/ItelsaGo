@@ -21,7 +21,7 @@ import ConfirmDeleteDialog from "@/components/cards/ConfirmDeleteDialog";
 type Currency = "ARS" | "USD";
 type PropertyType = "depto" | "casa" | "lote" | "local";
 type OperationType = "venta" | "alquiler" | "temporario";
-type AgencyPlan = "premium" | "sponsor" | "free";
+type AgencyPlan = "premium" | "pro" | "free";
 
 type FormState = {
   title: string;
@@ -69,6 +69,7 @@ export default function EditarInmueblePage() {
     null
   );
   const [openDelete, setOpenDelete] = useState(false);
+  const [role, setRole] = useState<string | null>(null);
 
   const [f, setF] = useState<FormState>({
     title: "",
@@ -90,6 +91,16 @@ export default function EditarInmueblePage() {
     () => splitUrls(f.images).slice(0, 18),
     [f.images]
   );
+
+  // Leer rol del localStorage
+  useEffect(() => {
+    const r = window.localStorage.getItem("role");
+    setRole(r);
+    // Si no es admin, redirigir
+    if (r !== "admin") {
+      router.push("/inmuebles");
+    }
+  }, [router]);
 
   useEffect(() => {
     if (!id) return; // sin id, evitamos fetch
@@ -498,21 +509,24 @@ export default function EditarInmueblePage() {
                   </div>
                 </Box>
 
-                <FormControl fullWidth>
-                  <InputLabel id="plan-label">Plan</InputLabel>
-                  <Select
-                    labelId="plan-label"
-                    label="Plan"
-                    value={f.agencyPlan}
-                    onChange={(e) =>
-                      set("agencyPlan", e.target.value as AgencyPlan)
-                    }
-                  >
-                    <MenuItem value="free">Free</MenuItem>
-                    <MenuItem value="sponsor">Sponsor</MenuItem>
-                    <MenuItem value="premium">Premium</MenuItem>
-                  </Select>
-                </FormControl>
+                {/* Campo Plan solo visible para admin */}
+                {role === "admin" && (
+                  <FormControl fullWidth>
+                    <InputLabel id="plan-label">Plan</InputLabel>
+                    <Select
+                      labelId="plan-label"
+                      label="Plan"
+                      value={f.agencyPlan}
+                      onChange={(e) =>
+                        set("agencyPlan", e.target.value as AgencyPlan)
+                      }
+                    >
+                      <MenuItem value="free">Free</MenuItem>
+                      <MenuItem value="pro">Pro</MenuItem>
+                      <MenuItem value="premium">Premium</MenuItem>
+                    </Select>
+                  </FormControl>
+                )}
               </Box>
             </Box>
 
@@ -530,15 +544,18 @@ export default function EditarInmueblePage() {
                 marginTop: 2,
               }}
             >
-              <Button
-                variant="outlined"
-                color="error"
-                onClick={() => setOpenDelete(true)}
-                disabled={busy}
-              >
-                Eliminar
-              </Button>
-              <div style={{ display: "flex", gap: 12 }}>
+              {/* Botón eliminar solo visible para admin */}
+              {role === "admin" && (
+                <Button
+                  variant="outlined"
+                  color="error"
+                  onClick={() => setOpenDelete(true)}
+                  disabled={busy}
+                >
+                  Eliminar
+                </Button>
+              )}
+              <div style={{ display: "flex", gap: 12, marginLeft: "auto" }}>
                 <Button
                   variant="outlined"
                   color="inherit"

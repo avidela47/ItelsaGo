@@ -40,7 +40,7 @@ type Item = {
   location: string;
   rooms?: number;
   propertyType?: "depto" | "casa" | "lote" | "local";
-  agency?: { plan?: "premium" | "pro" | "free" };
+  agency?: { plan?: "premium" | "pro" | "sponsor" | "free" };
   createdAt?: string;
 };
 

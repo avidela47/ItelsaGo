@@ -12,9 +12,11 @@ import Alert from "@mui/material/Alert";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import WhatsAppIcon from "@mui/icons-material/WhatsApp";
 import PhoneIcon from "@mui/icons-material/Phone";
+import EditIcon from "@mui/icons-material/Edit";
+import DeleteIcon from "@mui/icons-material/Delete";
 import PropertyCard from "@/components/cards/PropertyCard";
 
-type Plan = "premium" | "pro" | "free";
+type Plan = "premium" | "pro" | "sponsor" | "free";
 
 type Item = {
   _id: string;
@@ -48,10 +50,17 @@ export default function InmueblePage() {
   const [loading, setLoading] = useState(true);
   const [item, setItem] = useState<Item | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [role, setRole] = useState<string | null>(null);
 
   const [idx, setIdx] = useState(0);
   const [similar, setSimilar] = useState<Item[]>([]);
   const [simErr, setSimErr] = useState<string | null>(null);
+
+  // Leer rol del localStorage
+  useEffect(() => {
+    const r = window.localStorage.getItem("role");
+    setRole(r);
+  }, []);
 
   // Fetch del item
   useEffect(() => {
@@ -78,11 +87,12 @@ export default function InmueblePage() {
   // Similares por tipo de propiedad
   useEffect(() => {
     if (!item?.propertyType) return;
+    const type = item.propertyType;
     let ok = true;
     (async () => {
       try {
         setSimErr(null);
-        const res = await fetch(`/api/listings?type=${encodeURIComponent(item.propertyType)}`, { cache: "no-store" });
+        const res = await fetch(`/api/listings?type=${encodeURIComponent(type)}`, { cache: "no-store" });
         const data: ApiList = await res.json();
         if (!res.ok) throw new Error(data?.error || "No se pudo cargar similares");
         if (!ok) return;
@@ -121,6 +131,24 @@ export default function InmueblePage() {
   function telLink() {
     const number = (item?.agency?.phone || "").replace(/[^\d+]/g, "");
     return number ? `tel:${number}` : undefined;
+  }
+
+  // Función eliminar (solo admin)
+  async function handleDelete() {
+    if (!confirm("¿Estás seguro de eliminar este inmueble?")) return;
+    try {
+      const res = await fetch(`/api/listings/${item?._id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Error al eliminar");
+      alert("Inmueble eliminado exitosamente");
+      router.push("/inmuebles");
+    } catch (error) {
+      alert("Error al eliminar el inmueble");
+    }
+  }
+
+  // Función editar (solo admin)
+  function handleEdit() {
+    router.push(`/inmuebles/${item?._id}/editar`);
   }
 
   if (loading) {
@@ -349,6 +377,30 @@ export default function InmueblePage() {
                 Llamar
               </Button>
             </Box>
+
+            {/* Botones de admin */}
+            {role === "admin" && (
+              <Box sx={{ display: "flex", gap: 1.2, mt: 1.5 }}>
+                <Button
+                  fullWidth
+                  variant="outlined"
+                  color="warning"
+                  startIcon={<EditIcon />}
+                  onClick={handleEdit}
+                >
+                  Editar
+                </Button>
+                <Button
+                  fullWidth
+                  variant="outlined"
+                  color="error"
+                  startIcon={<DeleteIcon />}
+                  onClick={handleDelete}
+                >
+                  Eliminar
+                </Button>
+              </Box>
+            )}
           </Box>
 
           <Box

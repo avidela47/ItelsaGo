@@ -6,7 +6,7 @@ import Chip from "@mui/material/Chip";
 import Button from "@mui/material/Button";
 import WhatsAppIcon from "@mui/icons-material/WhatsApp";
 
-type Plan = "premium" | "pro" | "free";
+type Plan = "premium" | "pro" | "sponsor" | "free";
 
 type Item = {
   _id: string;

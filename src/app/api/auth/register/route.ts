@@ -25,9 +25,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "El email ya está registrado" }, { status: 400 });
     }
 
-    const count = await User.countDocuments();
-    const finalRole: "admin" | "user" =
-      count === 0 ? "admin" : role === "admin" ? "admin" : "user";
+    // El rol final será el que se envía (nunca admin desde el formulario)
+    // Los admin se crean manualmente desde MongoDB Atlas
+    const finalRole: "user" | "agency" = role === "agency" ? "agency" : "user";
 
     const hashed = await bcrypt.hash(password, 10);
 
