@@ -9,9 +9,19 @@ export async function GET(req: NextRequest) {
     await dbConnect();
     const { searchParams } = new URL(req.url);
     const location = searchParams.get("location");
+    const showAll = searchParams.get("showAll"); // Para admin panel
 
     const query: any = {};
     if (location) query.location = location;
+    
+    // Si showAll=true (admin), mostrar todas las propiedades
+    // Si no, solo mostrar propiedades activas en el listado público
+    if (showAll !== "true") {
+      query.$or = [
+        { status: { $exists: false } },
+        { status: "active" }
+      ];
+    }
 
     const items = await Listing.find(query).sort({ createdAt: -1 }).lean();
 
