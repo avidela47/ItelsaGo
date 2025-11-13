@@ -104,6 +104,65 @@ export default function InmueblePage() {
     return () => { ok = false; };
   }, [item?._id, item?.propertyType]);
 
+  // Meta tags dinámicos para SEO
+  useEffect(() => {
+    if (!item) return;
+    
+    const title = `${item.title} - ${item.location} | ITELSA Go`;
+    const description = item.description 
+      ? item.description.slice(0, 160) 
+      : `${item.propertyType || "Propiedad"} en ${item.operationType || "venta"} en ${item.location}. ${item.price ? `Precio: ${item.currency} ${new Intl.NumberFormat("es-AR").format(item.price)}` : ""}`;
+    const imageUrl = item.images?.[0] || "/logo-itelsa-go.svg";
+
+    document.title = title;
+    
+    // Meta description
+    let metaDesc = document.querySelector('meta[name="description"]');
+    if (!metaDesc) {
+      metaDesc = document.createElement('meta');
+      metaDesc.setAttribute('name', 'description');
+      document.head.appendChild(metaDesc);
+    }
+    metaDesc.setAttribute('content', description);
+
+    // Open Graph tags
+    const ogTags = {
+      'og:title': title,
+      'og:description': description,
+      'og:image': imageUrl,
+      'og:type': 'website',
+      'og:locale': 'es_AR'
+    };
+
+    Object.entries(ogTags).forEach(([property, content]) => {
+      let metaTag = document.querySelector(`meta[property="${property}"]`);
+      if (!metaTag) {
+        metaTag = document.createElement('meta');
+        metaTag.setAttribute('property', property);
+        document.head.appendChild(metaTag);
+      }
+      metaTag.setAttribute('content', content);
+    });
+
+    // Twitter tags
+    const twitterTags = {
+      'twitter:card': 'summary_large_image',
+      'twitter:title': title,
+      'twitter:description': description,
+      'twitter:image': imageUrl
+    };
+
+    Object.entries(twitterTags).forEach(([name, content]) => {
+      let metaTag = document.querySelector(`meta[name="${name}"]`);
+      if (!metaTag) {
+        metaTag = document.createElement('meta');
+        metaTag.setAttribute('name', name);
+        document.head.appendChild(metaTag);
+      }
+      metaTag.setAttribute('content', content);
+    });
+  }, [item]);
+
   // Imágenes seguras
   const imgs = useMemo(() => {
     const arr = Array.isArray(item?.images) ? item!.images.filter(Boolean) : [];
@@ -173,8 +232,50 @@ export default function InmueblePage() {
   // Seguridad por si idx queda fuera de rango
   const safeIdx = Math.min(Math.max(idx, 0), imgs.length - 1);
 
+  // JSON-LD structured data para SEO
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "RealEstateListing",
+    "name": item.title,
+    "description": item.description || `${item.propertyType || "Propiedad"} en ${item.operationType || "venta"}`,
+    "url": typeof window !== "undefined" ? window.location.href : "",
+    "image": imgs[0],
+    "address": {
+      "@type": "PostalAddress",
+      "addressLocality": item.location,
+      "addressCountry": "AR"
+    },
+    "offers": {
+      "@type": "Offer",
+      "price": item.price,
+      "priceCurrency": item.currency,
+      "availability": "https://schema.org/InStock"
+    },
+    ...(item.m2Total && {
+      "floorSize": {
+        "@type": "QuantitativeValue",
+        "value": item.m2Total,
+        "unitCode": "MTK"
+      }
+    }),
+    ...(item.bedrooms && { "numberOfRooms": item.bedrooms }),
+    ...(item.bathrooms && { "numberOfBathroomsTotal": item.bathrooms }),
+    ...(item.agency?.name && {
+      "provider": {
+        "@type": "Organization",
+        "name": item.agency.name
+      }
+    })
+  };
+
   return (
     <main style={{ padding: "24px 16px", maxWidth: 1200, margin: "0 auto" }}>
+      {/* JSON-LD para Google */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      />
+      
       {/* Toolbar superior */}
       <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
         <Button size="small" onClick={() => router.back()} sx={{ textTransform: "none" }}>← Volver</Button>
