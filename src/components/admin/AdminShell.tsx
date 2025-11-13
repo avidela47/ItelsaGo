@@ -8,7 +8,7 @@ import AppBar from "@mui/material/AppBar";
 import Toolbar from "@mui/material/Toolbar";
 import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
-import Divider from "@mui/material/Divider";
+import DashboardIcon from "@mui/icons-material/Dashboard";
 
 export default function AdminShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -34,7 +34,10 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
     <Box sx={{ display: "grid", gridTemplateColumns: "240px 1fr", minHeight: "100vh" }}>
       {/* Sidebar */}
       <Box sx={{ p: 2, borderRight: "1px solid rgba(255,255,255,.08)", bgcolor: "rgba(255,255,255,.02)" }}>
-        <Typography sx={{ fontWeight: 800, mb: 2 }}>Panel ITELSA Go</Typography>
+        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 1, mb: 2 }}>
+          <DashboardIcon sx={{ fontSize: 20 }} />
+          <Typography>Panel</Typography>
+        </Box>
         <nav style={{ display: "grid", gap: 8 }}>
           <Link href="/panel">
             <Button fullWidth variant={pathname === "/panel" ? "contained" : "outlined"}>Resumen</Button>
@@ -45,10 +48,6 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
             </Button>
           </Link>
         </nav>
-        <Divider sx={{ my: 2 }} />
-        <div style={{ fontSize: 12, opacity: .7 }}>
-          Logueo simple por cookie <code>role=admin</code>. (Luego migramos a JWT/NextAuth)
-        </div>
       </Box>
 
       {/* Main */}
@@ -56,7 +55,6 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
         <AppBar position="static" color="transparent" elevation={0}
           sx={{ borderBottom: "1px solid rgba(255,255,255,.08)", backdropFilter: "blur(6px)" }}>
           <Toolbar sx={{ gap: 2 }}>
-            <Typography sx={{ fontWeight: 800 }}>Administrador</Typography>
             <Box sx={{ ml: "auto" }}>
               <Button href="/inmuebles" variant="outlined">Ver sitio</Button>
             </Box>

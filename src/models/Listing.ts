@@ -21,6 +21,7 @@ const ListingSchema = new Schema(
     images: { type: [String], default: [] },
     description: { type: String, default: "" },
     agency: { type: AgencySchema, default: { plan: "free" } },
+    status: { type: String, enum: ["active", "suspended"], default: "active" },
   },
   { timestamps: true }
 );

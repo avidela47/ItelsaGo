@@ -1,12 +1,15 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 
 export type UserRole = "user" | "agency" | "admin";
+export type SubscriptionPlan = "free" | "pro" | "premium";
 
 export interface IUser extends Document {
   name?: string;
   email: string;
   password: string;
   role: UserRole;
+  plan?: SubscriptionPlan;
+  subscriptionDate?: Date;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -21,6 +24,12 @@ const UserSchema = new Schema<IUser>(
       enum: ["user", "agency", "admin"],
       default: "user",
     },
+    plan: {
+      type: String,
+      enum: ["free", "pro", "premium"],
+      default: "free",
+    },
+    subscriptionDate: { type: Date },
   },
   {
     timestamps: true,
