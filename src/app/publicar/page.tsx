@@ -1,359 +1,259 @@
 "use client";
 
-import { useRef, useState, forwardRef, useMemo } from "react";
-import {
-  Box,
-  TextField,
-  MenuItem,
-  Select,
-  FormControl,
-  InputLabel,
-  Button,
-  Alert,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  IconButton,
-  Slide,
-  useMediaQuery,
-  useTheme,
-  Chip,
-  Divider,
-  Tooltip,
-} from "@mui/material";
-import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
-import StarRoundedIcon from "@mui/icons-material/StarRounded";
-import BoltRoundedIcon from "@mui/icons-material/BoltRounded";
-import WorkspacePremiumRoundedIcon from "@mui/icons-material/WorkspacePremiumRounded";
+import { useEffect, useState, FormEvent } from "react";
+import { useRouter } from "next/navigation";
+import Box from "@mui/material/Box";
+import TextField from "@mui/material/TextField";
+import Button from "@mui/material/Button";
+import MenuItem from "@mui/material/MenuItem";
+import Typography from "@mui/material/Typography";
+import Alert from "@mui/material/Alert";
+import CircularProgress from "@mui/material/CircularProgress";
 
-type Currency = "ARS" | "USD";
+type Role = "guest" | "user" | "inmobiliaria" | "admin";
+type Plan = "free" | "sponsor" | "premium";
 type PropertyType = "depto" | "casa" | "lote" | "local";
-type OperationType = "venta" | "alquiler" | "temporario";
-type AgencyPlan = "premium" | "sponsor" | "free";
 
-type FormState = {
-  title: string;
-  location: string;
-  price: string;
-  currency: Currency;
-  rooms: string;
-  propertyType: PropertyType;
-  operationType: OperationType;
-  images: string;       // URLs separadas por coma
-  description: string;
-  agencyLogo: string;   // URL del logo
-  agencyPlan: AgencyPlan;
-};
-
-const Transition = forwardRef(function Transition(props: any, ref: any) {
-  return <Slide direction="up" ref={ref} {...props} />;
-});
-
-function newKey() {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
-  return Math.random().toString(36).slice(2) + Date.now().toString(36);
-}
-
-const splitUrls = (s: string) =>
-  s.split(",").map((x) => x.trim()).filter((x) => x && (/^(https?:)?\/\//i.test(x) || x.startsWith("/uploads/")));
-
-async function uploadLocal(files: FileList): Promise<string[]> {
-  const fd = new FormData();
-  Array.from(files).forEach((f) => fd.append("files", f));
-  const res = await fetch("/api/upload", { method: "POST", body: fd });
-  const data = await res.json();
-  if (!res.ok || !data?.ok) throw new Error(data?.error || "No se pudo subir");
-  return data.urls as string[];
+function getRoleFromCookie(): Role {
+  if (typeof document === "undefined") return "guest";
+  const match = document.cookie.match(/(?:^|;)\s*role=([^;]+)/);
+  const value = match ? decodeURIComponent(match[1]) : "";
+  if (value === "admin" || value === "user" || value === "inmobiliaria") return value;
+  return "guest";
 }
 
 export default function PublicarPage() {
-  const theme = useTheme();
-  const fullScreen = useMediaQuery(theme.breakpoints.down("md"));
-  const [open, setOpen] = useState(true);
+  const router = useRouter();
+  const [role, setRole] = useState<Role>("guest");
+  const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [okMsg, setOkMsg] = useState<string | null>(null);
 
-  const [f, setF] = useState<FormState>({
-    title: "",
-    location: "",
-    price: "",
-    currency: "ARS",
-    rooms: "0",
-    propertyType: "depto",
-    operationType: "venta",
-    images: "",
-    description: "",
-    agencyLogo: "",
-    agencyPlan: "free",
-  });
+  const [title, setTitle] = useState("");
+  const [location, setLocation] = useState("");
+  const [price, setPrice] = useState<number | "">("");
+  const [currency, setCurrency] = useState<"USD" | "ARS">("USD");
+  const [propertyType, setPropertyType] = useState<PropertyType>("casa");
+  const [rooms, setRooms] = useState<number | "">("");
+  const [description, setDescription] = useState("");
+  const [images, setImages] = useState<string>("");
+  const [plan, setPlan] = useState<Plan>("free"); // por defecto free
 
-  const set = <K extends keyof FormState>(k: K, v: FormState[K]) => setF((s) => ({ ...s, [k]: v }));
+  useEffect(() => {
+    const r = getRoleFromCookie();
+    setRole(r);
+    setLoading(false);
+    if (r !== "admin" && r !== "inmobiliaria") {
+      router.replace("/login?from=publicar");
+    }
+  }, [router]);
 
-  const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
-  const [newId, setNewId] = useState<string | null>(null);
-  const idemRef = useRef<string>(newKey());
-
-  const imagesList = useMemo(() => splitUrls(f.images).slice(0, 18), [f.images]);
-
-  async function submit(e: React.FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    if (busy) return;
-    setBusy(true);
-    setMsg(null);
-    setNewId(null);
-
-    const errors: string[] = [];
-    if (!f.title.trim()) errors.push("Título requerido");
-    if (!f.location.trim()) errors.push("Ubicación requerida");
-    const priceNum = Number(f.price);
-    if (!priceNum || Number.isNaN(priceNum) || priceNum <= 0) errors.push("Precio inválido");
-    if (imagesList.length === 0) errors.push("Al menos 1 imagen válida");
-    if (errors.length) { setMsg({ type: "err", text: errors.join(" · ") }); setBusy(false); return; }
+    setError(null);
+    setOkMsg(null);
 
     try {
-      const key = idemRef.current;
+      setSending(true);
+
+      const body: any = {
+        title,
+        location,
+        price: Number(price) || 0,
+        currency,
+        propertyType,
+        rooms: Number(rooms) || undefined,
+        description,
+        images: images
+          .split("\n")
+          .map((l) => l.trim())
+          .filter(Boolean),
+      };
+
+      // Solo el admin puede establecer el plan al crear
+      if (role === "admin") {
+        body.plan = plan;
+      }
+
       const res = await fetch("/api/listings", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-idempotency-key": key },
-        body: JSON.stringify({
-          idempotencyKey: key,
-          title: f.title,
-          location: f.location,
-          price: priceNum,
-          currency: f.currency,
-          rooms: Number(f.rooms || 0),
-          propertyType: f.propertyType,
-          operationType: f.operationType,
-          images: imagesList,
-          description: f.description,
-          agency: f.agencyLogo ? { logo: f.agencyLogo, plan: f.agencyPlan } : { plan: f.agencyPlan },
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
       });
+
       const data = await res.json();
       if (!res.ok) {
-        const text = data?.errors?.join(" · ") || data?.error || "Error al publicar";
-        setMsg({ type: "err", text });
-      } else {
-        setMsg({
-          type: "ok",
-          text: data?.dedup ? "Ya estaba creada (idempotente)" : "Publicación creada con éxito",
-        });
-        if (data?.id) setNewId(data.id);
-        setF((s) => ({ ...s, title: "", images: "", price: "", description: "" }));
-        idemRef.current = newKey();
+        throw new Error(data?.error || "No se pudo publicar");
       }
-    } catch {
-      setMsg({ type: "err", text: "Error de red" });
-    } finally {
-      setBusy(false);
-    }
-  }
 
-  async function handleImagesPick(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-    setBusy(true);
-    try {
-      const urls = await uploadLocal(files);
-      if (urls.length) {
-        const current = splitUrls(f.images);
-        set("images", [...current, ...urls].join(", "));
-        setMsg({ type: "ok", text: `Subidas ${urls.length} imágenes` });
-      }
+      setOkMsg("Inmueble publicado correctamente.");
+      // Limpio un poco
+      setTitle("");
+      setLocation("");
+      setPrice("");
+      setRooms("");
+      setDescription("");
+      setImages("");
+      if (role === "admin") setPlan("free");
     } catch (err: any) {
-      setMsg({ type: "err", text: err?.message || "No se pudo subir" });
+      setError(err?.message || "Error al publicar");
     } finally {
-      setBusy(false);
-      e.currentTarget.value = "";
+      setSending(false);
     }
   }
 
-  async function handleLogoPick(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-    setBusy(true);
-    try {
-      const [url] = await uploadLocal(files);
-      if (url) {
-        set("agencyLogo", url);
-        setMsg({ type: "ok", text: "Logo cargado" });
-      }
-    } catch (err: any) {
-      setMsg({ type: "err", text: err?.message || "No se pudo subir el logo" });
-    } finally {
-      setBusy(false);
-      e.currentTarget.value = "";
-    }
+  if (loading) {
+    return (
+      <main style={{ padding: "24px 16px", maxWidth: 900, margin: "0 auto" }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <CircularProgress size={20} />
+          <Typography sx={{ opacity: 0.8 }}>Verificando acceso…</Typography>
+        </Box>
+      </main>
+    );
   }
 
-  const planChip = (plan: AgencyPlan) => {
-    const common = { sx: { fontWeight: 700, color: "#0b0b0f" } as any };
-    if (plan === "premium")
-      return (
-        <Chip
-          icon={<WorkspacePremiumRoundedIcon />}
-          label="PREMIUM"
-          {...common}
-          sx={{ ...common.sx, bgcolor: "#ffd54d", border: "1px solid rgba(0,0,0,.2)" }}
-          size="small"
-        />
-      );
-    if (plan === "sponsor")
-      return <Chip icon={<BoltRoundedIcon />} label="SPONSOR" {...common} sx={{ ...common.sx, bgcolor: "#22d3ee" }} size="small" />;
-    return <Chip icon={<StarRoundedIcon />} label="FREE" {...common} sx={{ ...common.sx, bgcolor: "#b0bec5" }} size="small" />;
-  };
+  if (role !== "admin" && role !== "inmobiliaria") {
+    return (
+      <main style={{ padding: "24px 16px", maxWidth: 900, margin: "0 auto" }}>
+        <Alert severity="error">
+          Acceso restringido. Ingresá con una cuenta de inmobiliaria o administrador.
+        </Alert>
+      </main>
+    );
+  }
 
   return (
-    <Dialog
-      open={open}
-      onClose={() => (busy ? null : setOpen(false))}
-      TransitionComponent={Transition}
-      fullScreen={fullScreen}
-      fullWidth
-      maxWidth="md"
-      PaperProps={{
-        sx: {
-          borderRadius: fullScreen ? 0 : 4,
-          overflow: "hidden",
-          background: "linear-gradient(180deg, rgba(20,22,27,.95) 0%, rgba(12,14,18,.96) 100%)",
-          backdropFilter: "blur(10px)",
-          border: "1px solid rgba(255,255,255,.08)",
-          boxShadow: "0 18px 60px rgba(0,0,0,.7), inset 0 1px 0 rgba(255,255,255,.05)",
-          maxHeight: "92vh",
-        },
-      }}
-    >
-      <DialogTitle sx={{ py: 1.25, px: 2, display: "flex", alignItems: "center", gap: 1.25, borderBottom: "1px solid rgba(255,255,255,.08)", background: "linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,0))" }}>
-        <img src="/logo-itelsa-go.svg" alt="ITELSA Go" style={{ height: 24, width: "auto" }} />
-        <Box component="span" sx={{ fontWeight: 800, fontSize: 18 }}>Publicar inmueble</Box>
-        <Box sx={{ ml: "auto", display: "flex", gap: 1, alignItems: "center" }}>
-          <Tooltip title="Plan que se guardará en la publicación">{planChip(f.agencyPlan)}</Tooltip>
-          <IconButton aria-label="Cerrar" onClick={() => (busy ? null : setOpen(false))} sx={{ color: "rgba(255,255,255,.9)" }}>
-            <CloseRoundedIcon />
-          </IconButton>
-        </Box>
-      </DialogTitle>
+    <main style={{ padding: "24px 16px", maxWidth: 900, margin: "0 auto" }}>
+      <Typography variant="h4" fontWeight={800} sx={{ mb: 2 }}>
+        Publicar inmueble
+      </Typography>
 
-      <Box component="form" onSubmit={submit}>
-        <DialogContent
-          dividers
-          sx={{
-            px: { xs: 2, md: 3 },
-            py: 2,
-            overflowY: "auto",
-            maxHeight: { xs: "calc(92vh - 104px)", md: "calc(92vh - 116px)" },
-            "&::-webkit-scrollbar": { width: 10 },
-            "&::-webkit-scrollbar-thumb": { backgroundColor: "rgba(255,255,255,.18)", borderRadius: 8 },
-          }}
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
+      {okMsg && (
+        <Alert severity="success" sx={{ mb: 2 }}>
+          {okMsg}
+        </Alert>
+      )}
+
+      <Box
+        component="form"
+        onSubmit={handleSubmit}
+        sx={{
+          display: "grid",
+          gap: 2,
+          gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
+        }}
+      >
+        <TextField
+          label="Título"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          fullWidth
+          required
+          sx={{ gridColumn: "1 / -1" }}
+        />
+        <TextField
+          label="Ubicación"
+          value={location}
+          onChange={(e) => setLocation(e.target.value)}
+          fullWidth
+          required
+        />
+        <TextField
+          label="Precio"
+          type="number"
+          value={price}
+          onChange={(e) => setPrice(e.target.value === "" ? "" : Number(e.target.value))}
+          fullWidth
+          required
+        />
+        <TextField
+          select
+          label="Moneda"
+          value={currency}
+          onChange={(e) => setCurrency(e.target.value as "USD" | "ARS")}
+          fullWidth
         >
-          <Box sx={{ display: "grid", gap: 16 }}>
-            {/* Bloque 1 */}
-            <Box sx={{ display: "grid", gap: 12 }}>
-              <TextField required label="Título" placeholder="Depto 2D con balcón" value={f.title} onChange={(e) => set("title", e.target.value)} fullWidth />
-              <TextField required label="Ubicación" placeholder="Nueva Córdoba" value={f.location} onChange={(e) => set("location", e.target.value)} fullWidth />
+          <MenuItem value="USD">USD</MenuItem>
+          <MenuItem value="ARS">ARS</MenuItem>
+        </TextField>
 
-              <Box sx={{ display: "grid", gap: 12, gridTemplateColumns: { xs: "1fr", md: "1fr 140px 1fr" } }}>
-                <TextField required label="Precio" type="number" placeholder="145000" value={f.price} onChange={(e) => set("price", e.target.value)} fullWidth />
-                <FormControl fullWidth>
-                  <InputLabel id="currency-label">Moneda</InputLabel>
-                  <Select labelId="currency-label" label="Moneda" value={f.currency} onChange={(e) => set("currency", e.target.value as Currency)}>
-                    <MenuItem value="ARS">ARS</MenuItem>
-                    <MenuItem value="USD">USD</MenuItem>
-                  </Select>
-                </FormControl>
-                <TextField label="Ambientes" type="number" placeholder="2" value={f.rooms} onChange={(e) => set("rooms", e.target.value)} fullWidth />
-              </Box>
+        <TextField
+          select
+          label="Tipo de propiedad"
+          value={propertyType}
+          onChange={(e) => setPropertyType(e.target.value as PropertyType)}
+          fullWidth
+        >
+          <MenuItem value="casa">Casa</MenuItem>
+          <MenuItem value="depto">Departamento</MenuItem>
+          <MenuItem value="lote">Lote</MenuItem>
+          <MenuItem value="local">Local</MenuItem>
+        </TextField>
 
-              <Box sx={{ display: "grid", gap: 12, gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" } }}>
-                <FormControl fullWidth>
-                  <InputLabel id="type-label">Tipo</InputLabel>
-                  <Select labelId="type-label" label="Tipo" value={f.propertyType} onChange={(e) => set("propertyType", e.target.value as PropertyType)}>
-                    <MenuItem value="depto">Departamento</MenuItem>
-                    <MenuItem value="casa">Casa</MenuItem>
-                    <MenuItem value="lote">Lote</MenuItem>
-                    <MenuItem value="local">Local</MenuItem>
-                  </Select>
-                </FormControl>
-                <FormControl fullWidth>
-                  <InputLabel id="op-label">Operación</InputLabel>
-                  <Select labelId="op-label" label="Operación" value={f.operationType} onChange={(e) => set("operationType", e.target.value as OperationType)}>
-                    <MenuItem value="venta">Venta</MenuItem>
-                    <MenuItem value="alquiler">Alquiler</MenuItem>
-                    <MenuItem value="temporario">Temporario</MenuItem>
-                  </Select>
-                </FormControl>
-              </Box>
+        <TextField
+          label="Ambientes"
+          type="number"
+          value={rooms}
+          onChange={(e) => setRooms(e.target.value === "" ? "" : Number(e.target.value))}
+          fullWidth
+        />
 
-              <TextField required label="Imágenes (URLs separadas por coma)" placeholder="https://... o /uploads/xxx.jpg" value={f.images} onChange={(e) => set("images", e.target.value)} fullWidth />
+        {/* PLAN – SOLO ADMIN LO VE */}
+        {role === "admin" && (
+          <TextField
+            select
+            label="Plan (visibilidad)"
+            value={plan}
+            onChange={(e) => setPlan(e.target.value as Plan)}
+            fullWidth
+          >
+            <MenuItem value="free">FREE</MenuItem>
+            <MenuItem value="sponsor">SPONSOR</MenuItem>
+            <MenuItem value="premium">PREMIUM</MenuItem>
+          </TextField>
+        )}
 
-              {/* Subidor de FOTOS */}
-              <Box sx={{ display: "flex", gap: 10, alignItems: "center" }}>
-                <input type="file" multiple accept="image/*" onChange={handleImagesPick} />
-                <small style={{ opacity: 0.7 }}>Se guardan en <code>/public/uploads</code></small>
-              </Box>
-            </Box>
+        <TextField
+          label="URLs de imágenes (una por línea)"
+          value={images}
+          onChange={(e) => setImages(e.target.value)}
+          fullWidth
+          multiline
+          minRows={4}
+          sx={{ gridColumn: "1 / -1" }}
+        />
 
-            {/* Preview */}
-            {imagesList.length > 0 && (
-              <Box sx={{ display: "grid", gap: 1.5 }}>
-                <div style={{ fontSize: 12, opacity: 0.75 }}>Previsualización</div>
-                <div style={{ display: "grid", gap: 8, gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))" }}>
-                  {imagesList.map((src, i) => (
-                    <div key={i} style={{ position: "relative", paddingTop: "65%", borderRadius: 10, overflow: "hidden", border: "1px solid rgba(255,255,255,.12)", background: "rgba(255,255,255,.03)" }}>
-                      <img src={src} alt={`img-${i}`} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
-                    </div>
-                  ))}
-                </div>
-              </Box>
-            )}
+        <TextField
+          label="Descripción"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          fullWidth
+          multiline
+          minRows={4}
+          sx={{ gridColumn: "1 / -1" }}
+        />
 
-            <Divider flexItem sx={{ opacity: 0.2 }} />
-
-            {/* Bloque 2 */}
-            <Box sx={{ display: "grid", gap: 12 }}>
-              <TextField label="Descripción" multiline minRows={4} value={f.description} onChange={(e) => set("description", e.target.value)} fullWidth />
-
-              <Box sx={{ display: "grid", gap: 12, gridTemplateColumns: { xs: "1fr", md: "1fr 220px" }, alignItems: "center" }}>
-                <Box sx={{ display: "grid", gap: 1 }}>
-                  <TextField label="Logo inmobiliaria (URL)" placeholder="https://... o /uploads/logo.png" value={f.agencyLogo} onChange={(e) => set("agencyLogo", e.target.value)} fullWidth />
-                  <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                    <input type="file" accept="image/*" onChange={handleLogoPick} />
-                    {f.agencyLogo ? (
-                      <img src={f.agencyLogo} alt="logo" style={{ width: 36, height: 36, objectFit: "contain", borderRadius: 6, background: "rgba(255,255,255,.8)", padding: 2, border: "1px solid rgba(0,0,0,.15)" }} />
-                    ) : null}
-                  </div>
-                </Box>
-
-                <FormControl fullWidth>
-                  <InputLabel id="plan-label">Plan</InputLabel>
-                  <Select labelId="plan-label" label="Plan" value={f.agencyPlan} onChange={(e) => set("agencyPlan", e.target.value as AgencyPlan)}>
-                    <MenuItem value="free">Free</MenuItem>
-                    <MenuItem value="sponsor">Sponsor</MenuItem>
-                    <MenuItem value="premium">Premium</MenuItem>
-                  </Select>
-                </FormControl>
-              </Box>
-            </Box>
-
-            {msg && <Alert severity={msg.type === "ok" ? "success" : "error"}>{msg.text}</Alert>}
-          </Box>
-        </DialogContent>
-
-        <DialogActions sx={{ py: 1.25, px: { xs: 2, md: 3 }, borderTop: "1px solid rgba(255,255,255,.08)", background: "linear-gradient(0deg, rgba(255,255,255,.05), rgba(255,255,255,0))", position: "sticky", bottom: 0, zIndex: 1 }}>
-          {newId && (
-            <Button href={`/inmuebles/${newId}`} variant="outlined" sx={{ mr: "auto" }}>
-              Ver publicación
-            </Button>
-          )}
-          <Button onClick={() => setOpen(false)} variant="outlined" color="inherit" disabled={busy}>
-            Cancelar
+        <Box sx={{ gridColumn: "1 / -1", mt: 1, textAlign: "right" }}>
+          <Button
+            type="submit"
+            variant="contained"
+            disabled={sending}
+          >
+            {sending ? "Publicando…" : "Publicar inmueble"}
           </Button>
-          <Button type="submit" disabled={busy}>{busy ? "Publicando..." : "Publicar"}</Button>
-        </DialogActions>
+        </Box>
       </Box>
-    </Dialog>
+    </main>
   );
 }
+
 
 
 

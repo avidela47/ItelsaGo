@@ -14,7 +14,7 @@ import WhatsAppIcon from "@mui/icons-material/WhatsApp";
 import PhoneIcon from "@mui/icons-material/Phone";
 import PropertyCard from "@/components/cards/PropertyCard";
 
-type Plan = "premium" | "sponsor" | "free";
+type Plan = "premium" | "pro" | "free";
 
 type Item = {
   _id: string;
@@ -75,14 +75,14 @@ export default function InmueblePage() {
     return () => { ok = false; };
   }, [id]);
 
-  // Similares por ubicación
+  // Similares por tipo de propiedad
   useEffect(() => {
-    if (!item?.location) return;
+    if (!item?.propertyType) return;
     let ok = true;
     (async () => {
       try {
         setSimErr(null);
-        const res = await fetch(`/api/listings?location=${encodeURIComponent(item.location)}`, { cache: "no-store" });
+        const res = await fetch(`/api/listings?type=${encodeURIComponent(item.propertyType)}`, { cache: "no-store" });
         const data: ApiList = await res.json();
         if (!res.ok) throw new Error(data?.error || "No se pudo cargar similares");
         if (!ok) return;
@@ -92,7 +92,7 @@ export default function InmueblePage() {
       }
     })();
     return () => { ok = false; };
-  }, [item?._id, item?.location]);
+  }, [item?._id, item?.propertyType]);
 
   // Imágenes seguras
   const imgs = useMemo(() => {
@@ -106,13 +106,6 @@ export default function InmueblePage() {
     const p = new Intl.NumberFormat("es-AR").format(item.price || 0);
     return `${item.currency === "USD" ? "USD" : "ARS"} ${p}`;
   }, [item]);
-
-  // NUEVO: 30 días
-  const isNuevo = useMemo(() => {
-    if (!item?.createdAt) return false;
-    const d = Date.parse(item.createdAt);
-    return Date.now() - d < 1000 * 60 * 60 * 24 * 30;
-  }, [item?.createdAt]);
 
   // Links contacto
   function waLink() {
@@ -195,25 +188,31 @@ export default function InmueblePage() {
             />
 
             {/* BADGES: arriba a la derecha (chicos) */}
-            <Box sx={{ position: "absolute", top: 8, right: 8, display: "flex", gap: 1 }}>
-              {isNuevo && (
+            {item.agency?.plan && (
+              <Box sx={{ position: "absolute", top: 8, right: 8 }}>
                 <Chip
-                  label="NUEVO"
+                  label={(item.agency.plan === "sponsor" ? "PRO" : item.agency.plan).toUpperCase()}
                   size="small"
-                  color="success"
-                  sx={{ fontWeight: 800, opacity: 0.95 }}
+                  sx={{
+                    fontWeight: 800,
+                    opacity: 0.95,
+                    ...(item.agency.plan === "premium" && {
+                      bgcolor: "#D9A441",
+                      color: "#ffffff",
+                    }),
+                    ...((item.agency.plan === "pro" || item.agency.plan === "sponsor") && {
+                      bgcolor: "#2A6EBB",
+                      color: "#ffffff",
+                    }),
+                    ...(item.agency.plan === "free" && {
+                      bgcolor: "#4CAF50",
+                      color: "#ffffff",
+                    }),
+                  }}
+                  title={`Plan: ${item.agency.plan === "sponsor" ? "pro" : item.agency.plan}`}
                 />
-              )}
-              {item.agency?.plan && (
-                <Chip
-                  label={(item.agency.plan as string).toUpperCase()}
-                  size="small"
-                  color={item.agency.plan === "premium" ? "warning" : item.agency.plan === "sponsor" ? "info" : "default"}
-                  sx={{ fontWeight: 800, opacity: 0.95 }}
-                  title={`Plan: ${item.agency.plan}`}
-                />
-              )}
-            </Box>
+              </Box>
+            )}
 
             {/* Logo inmobiliaria abajo a la izquierda */}
             {item.agency?.logo && (
@@ -383,9 +382,23 @@ export default function InmueblePage() {
               <Box sx={{ display: "flex", alignItems: "center", gap: 0.8, mt: 0.2 }}>
                 {item.agency?.plan && (
                   <Chip
-                    label={item.agency.plan.toUpperCase()}
+                    label={(item.agency.plan === "sponsor" ? "PRO" : item.agency.plan).toUpperCase()}
                     size="small"
-                    color={item.agency.plan === "premium" ? "warning" : item.agency.plan === "sponsor" ? "info" : "default"}
+                    sx={{
+                      fontWeight: 700,
+                      ...(item.agency.plan === "premium" && {
+                        bgcolor: "#D9A441",
+                        color: "#ffffff",
+                      }),
+                      ...((item.agency.plan === "pro" || item.agency.plan === "sponsor") && {
+                        bgcolor: "#2A6EBB",
+                        color: "#ffffff",
+                      }),
+                      ...(item.agency.plan === "free" && {
+                        bgcolor: "#4CAF50",
+                        color: "#ffffff",
+                      }),
+                    }}
                   />
                 )}
                 {item.agency?.phone && (
@@ -400,7 +413,7 @@ export default function InmueblePage() {
       {/* Similares */}
       <Box sx={{ mt: 4 }}>
         <Typography variant="h6" fontWeight={800} sx={{ mb: 1 }}>
-          Propiedades similares en {item.location}
+          Propiedades similares: {item.propertyType ? labelTipo(item.propertyType) : "Todas"}
         </Typography>
         {simErr ? (
           <Typography sx={{ opacity: 0.7 }}>{simErr}</Typography>

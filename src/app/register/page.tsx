@@ -1,117 +1,131 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import {
+  Box,
+  TextField,
+  Button,
+  Typography,
+  Paper,
+  Alert,
+  MenuItem,
+} from "@mui/material";
 
 export default function RegisterPage() {
-  const [email, setEmail] = useState("");
+  const router = useRouter();
   const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [role, setRole] = useState<"admin" | "user">("user");
   const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<{ type: "ok" | "err"; text: string } | null>(
+    null
+  );
 
-  async function onSubmit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (busy) return;
     setBusy(true);
+    setMsg(null);
+
     try {
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, name }),
+        body: JSON.stringify({ name, email, password, role }),
       });
       const data = await res.json();
-      if (res.ok && data?.ok) {
-        alert(data?.info ? `${data.info}\nRegistrado con éxito.` : "Registrado con éxito.");
-        window.location.href = "/login";
-      } else {
-        alert(data?.error || "No se pudo registrar");
+      if (!res.ok) {
+        setMsg({ type: "err", text: data?.error || "No se pudo registrar" });
+        setBusy(false);
+        return;
       }
+      setMsg({ type: "ok", text: "Usuario creado" });
+      setTimeout(() => router.push("/login"), 600);
+    } catch {
+      setMsg({ type: "err", text: "Error de red" });
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <main style={{ padding: "24px 16px", maxWidth: 420, margin: "0 auto" }}>
-      <h1 style={{ margin: 0, fontSize: 24, fontWeight: 800 }}>Crear cuenta</h1>
-      <p style={{ opacity: .75, marginTop: 6 }}>
-        El <b>primer registro</b> queda como <b>ADMIN</b>. Luego, los siguientes serán <b>USER</b>.
-      </p>
+    <main
+      style={{
+        minHeight: "100vh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 16,
+      }}
+    >
+      <Paper
+        elevation={6}
+        sx={{
+          width: "100%",
+          maxWidth: 420,
+          p: 3,
+          borderRadius: 3,
+          background:
+            "linear-gradient(180deg, rgba(15,17,23,.98), rgba(8,10,14,.98))",
+          border: "1px solid rgba(255,255,255,.08)",
+        }}
+      >
+        <Typography variant="h6" fontWeight={800} sx={{ mb: 2, textAlign: "center" }}>
+          Crear usuario
+        </Typography>
 
-      <form onSubmit={onSubmit} style={{ display: "grid", gap: 12, marginTop: 16 }}>
-        <label style={{ display: "grid", gap: 6 }}>
-          <span style={{ fontSize: 14, opacity: .8 }}>Nombre</span>
-          <input
-            type="text"
+        {msg && (
+          <Alert
+            severity={msg.type === "ok" ? "success" : "error"}
+            sx={{ mb: 2 }}
+          >
+            {msg.text}
+          </Alert>
+        )}
+
+        <form onSubmit={submit} style={{ display: "grid", gap: 16 }}>
+          <TextField
+            label="Nombre"
+            fullWidth
+            required
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Tu nombre"
-            style={{
-              background: "rgba(255,255,255,.05)",
-              border: "1px solid rgba(255,255,255,.15)",
-              color: "inherit",
-              padding: "10px 12px",
-              borderRadius: 10,
-              outline: "none",
-            }}
           />
-        </label>
-
-        <label style={{ display: "grid", gap: 6 }}>
-          <span style={{ fontSize: 14, opacity: .8 }}>Email</span>
-          <input
+          <TextField
+            label="Email"
             type="email"
+            fullWidth
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="admin@tu-dominio.com"
-            style={{
-              background: "rgba(255,255,255,.05)",
-              border: "1px solid rgba(255,255,255,.15)",
-              color: "inherit",
-              padding: "10px 12px",
-              borderRadius: 10,
-              outline: "none",
-            }}
           />
-        </label>
-
-        <label style={{ display: "grid", gap: 6 }}>
-          <span style={{ fontSize: 14, opacity: .8 }}>Contraseña</span>
-          <input
+          <TextField
+            label="Contraseña"
             type="password"
+            fullWidth
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            style={{
-              background: "rgba(255,255,255,.05)",
-              border: "1px solid rgba(255,255,255,.15)",
-              color: "inherit",
-              padding: "10px 12px",
-              borderRadius: 10,
-              outline: "none",
-            }}
           />
-        </label>
+          <TextField
+            select
+            label="Rol"
+            fullWidth
+            value={role}
+            onChange={(e) => setRole(e.target.value as "admin" | "user")}
+          >
+            <MenuItem value="user">Usuario</MenuItem>
+            <MenuItem value="admin">Admin</MenuItem>
+          </TextField>
 
-        <button
-          type="submit"
-          disabled={busy}
-          style={{
-            padding: "10px 14px",
-            borderRadius: 10,
-            border: "1px solid rgba(255,255,255,.15)",
-            background: "rgba(16, 185, 129, 0.18)",
-            fontWeight: 800,
-            cursor: "pointer",
-          }}
-        >
-          {busy ? "Creando..." : "Crear cuenta"}
-        </button>
-
-        <div style={{ fontSize: 12, opacity: .7, marginTop: 6 }}>
-          Luego entrá en <a href="/login">/login</a>
-        </div>
-      </form>
+          <Button type="submit" disabled={busy} variant="contained" fullWidth>
+            {busy ? "Creando..." : "Crear usuario"}
+          </Button>
+        </form>
+      </Paper>
     </main>
   );
 }
+

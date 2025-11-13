@@ -1,135 +1,148 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import {
+  Box,
+  TextField,
+  Button,
+  Typography,
+  Paper,
+  Alert,
+  FormControlLabel,
+  Switch,
+} from "@mui/material";
 
 export default function LoginPage() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [inviteMode, setInviteMode] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [msg, setMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
 
-  async function onSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (busy) return;
     setBusy(true);
-    setError(null);
+    setMsg(null);
+
     try {
-      const res = await fetch("/api/auth/login", {
+      const url = inviteMode
+        ? "/api/auth/login?guest=1"
+        : "/api/auth/login";
+
+      const res = await fetch(url, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        headers: inviteMode ? undefined : { "Content-Type": "application/json" },
+        body: inviteMode ? undefined : JSON.stringify({ email, password }),
       });
+
       const data = await res.json();
-      if (!res.ok || !data?.ok) {
-        throw new Error(data?.error || "Credenciales inválidas");
+
+      if (!res.ok) {
+        setMsg({ type: "err", text: data?.error || "No se pudo iniciar sesión" });
+        setBusy(false);
+        return;
       }
-      // Si el login fue OK, ya quedó la cookie de sesión/rol. Redirigimos:
-      window.location.href = "/inmuebles";
-    } catch (err: any) {
-      setError(err?.message || "No se pudo iniciar sesión");
+
+      setMsg({ type: "ok", text: "Sesión iniciada" });
+
+      setTimeout(() => {
+        router.push("/inmuebles");
+      }, 400);
+    } catch {
+      setMsg({ type: "err", text: "Error de red" });
     } finally {
       setBusy(false);
     }
   }
 
-  async function entrarComoInvitado() {
-    // opcional: rol "guest" para probar UX sin sesión
-    const res = await fetch("/api/auth/login?guest=1", { method: "POST" });
-    if (res.ok) window.location.href = "/inmuebles";
-  }
-
   return (
-    <main style={{ padding: "24px 16px", maxWidth: 420, margin: "0 auto" }}>
-      <h1 style={{ margin: 0, fontSize: 24, fontWeight: 800 }}>Iniciar sesión</h1>
-      <p style={{ opacity: .75, marginTop: 6 }}>
-        Ingresá con tu correo y contraseña. <br />
-        Si aún no tenés cuenta, podés <a href="/register">registrarte aquí</a>.
-      </p>
-
-      {error && (
-        <div
-          style={{
-            marginTop: 10,
-            padding: "10px 12px",
-            border: "1px solid rgba(255,0,0,.25)",
-            background: "rgba(255,0,0,.08)",
-            borderRadius: 10,
-            fontSize: 14,
-          }}
-        >
-          {error}
-        </div>
-      )}
-
-      <form onSubmit={onSubmit} style={{ display: "grid", gap: 12, marginTop: 16 }}>
-        <label style={{ display: "grid", gap: 6 }}>
-          <span style={{ fontSize: 14, opacity: .8 }}>Email</span>
-          <input
-            type="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="tu@correo.com"
-            style={{
-              background: "rgba(255,255,255,.05)",
-              border: "1px solid rgba(255,255,255,.15)",
-              color: "inherit",
-              padding: "10px 12px",
-              borderRadius: 10,
-              outline: "none",
-            }}
+    <main
+      style={{
+        minHeight: "100vh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 16,
+      }}
+    >
+      <Paper
+        elevation={6}
+        sx={{
+          width: "100%",
+          maxWidth: 420,
+          p: 3,
+          borderRadius: 3,
+          background:
+            "linear-gradient(180deg, rgba(15,17,23,.98), rgba(8,10,14,.98))",
+          border: "1px solid rgba(255,255,255,.08)",
+        }}
+      >
+        <Box sx={{ textAlign: "center", mb: 2 }}>
+          <img
+            src="/logo-itelsa-go.svg"
+            alt="ITELSA Go"
+            style={{ height: 36, marginBottom: 8 }}
           />
-        </label>
+          <Typography variant="h6" fontWeight={800}>
+            Ingresar a ITELSA Go
+          </Typography>
+        </Box>
 
-        <label style={{ display: "grid", gap: 6 }}>
-          <span style={{ fontSize: 14, opacity: .8 }}>Contraseña</span>
-          <input
-            type="password"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            style={{
-              background: "rgba(255,255,255,.05)",
-              border: "1px solid rgba(255,255,255,.15)",
-              color: "inherit",
-              padding: "10px 12px",
-              borderRadius: 10,
-              outline: "none",
-            }}
+        {msg && (
+          <Alert
+            severity={msg.type === "ok" ? "success" : "error"}
+            sx={{ mb: 2 }}
+          >
+            {msg.text}
+          </Alert>
+        )}
+
+        <form
+          onSubmit={handleSubmit}
+          style={{ display: "grid", gap: 16 }}
+          noValidate
+        >
+          {!inviteMode && (
+            <>
+              <TextField
+                label="Email"
+                type="email"
+                fullWidth
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+              <TextField
+                label="Contraseña"
+                type="password"
+                fullWidth
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </>
+          )}
+
+          <FormControlLabel
+            control={
+              <Switch
+                checked={inviteMode}
+                onChange={(e) => setInviteMode(e.target.checked)}
+              />
+            }
+            label="Entrar como invitado (solo ver inmuebles)"
           />
-        </label>
 
-        <button
-          type="submit"
-          disabled={busy}
-          style={{
-            padding: "10px 14px",
-            borderRadius: 10,
-            border: "1px solid rgba(255,255,255,.15)",
-            background: "rgba(59,130,246,.2)",
-            fontWeight: 800,
-            cursor: "pointer",
-          }}
-        >
-          {busy ? "Ingresando..." : "Ingresar"}
-        </button>
-
-        <button
-          type="button"
-          onClick={entrarComoInvitado}
-          style={{
-            padding: "10px 14px",
-            borderRadius: 10,
-            border: "1px solid rgba(255,255,255,.15)",
-            background: "rgba(255,255,255,.06)",
-            fontWeight: 700,
-            cursor: "pointer",
-          }}
-        >
-          Entrar como invitado
-        </button>
-      </form>
+          <Button type="submit" disabled={busy} variant="contained" fullWidth>
+            {busy ? "Ingresando..." : inviteMode ? "Entrar como invitado" : "Iniciar sesión"}
+          </Button>
+        </form>
+      </Paper>
     </main>
   );
 }
+
 

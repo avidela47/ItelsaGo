@@ -6,114 +6,74 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
 
-  const next =
-    typeof window !== "undefined"
-      ? new URLSearchParams(window.location.search).get("next") || "/"
-      : "/";
-
-  async function onSubmit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (busy) return;
     setBusy(true);
+    setMsg(null);
     try {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, next }),
+        body: JSON.stringify({ email, password }),
       });
       const data = await res.json();
-      if (res.ok && data?.ok) {
-        window.location.href = data.next || "/";
+      if (!res.ok) {
+        setMsg(data?.error || "Error");
       } else {
-        alert(data?.error || "No se pudo iniciar sesión");
+        window.location.href = "/"; // o /panel si querés
       }
+    } catch {
+      setMsg("Error de red");
     } finally {
       setBusy(false);
     }
   }
 
-  async function doLogout() {
-    const res = await fetch("/api/auth/logout", { method: "POST" });
-    if (res.ok) window.location.href = "/";
+  async function guest() {
+    if (busy) return;
+    setBusy(true);
+    setMsg(null);
+    try {
+      const res = await fetch("/api/auth/login?guest=1", { method: "POST" });
+      if (!res.ok) setMsg("No se pudo entrar como invitado");
+      else window.location.href = "/";
+    } catch {
+      setMsg("Error de red");
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
-    <main style={{ padding: "24px 16px", maxWidth: 420, margin: "0 auto" }}>
-      <h1 style={{ margin: 0, fontSize: 24, fontWeight: 800 }}>Ingresar</h1>
-      <p style={{ opacity: 0.75, marginTop: 6 }}>Entrá con tu cuenta.</p>
-
-      <form onSubmit={onSubmit} style={{ display: "grid", gap: 12, marginTop: 16 }}>
-        <label style={{ display: "grid", gap: 6 }}>
-          <span style={{ fontSize: 14, opacity: 0.8 }}>Email</span>
-          <input
-            type="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="admin@tu-dominio.com"
-            style={{
-              background: "rgba(255,255,255,.05)",
-              border: "1px solid rgba(255,255,255,.15)",
-              color: "inherit",
-              padding: "10px 12px",
-              borderRadius: 10,
-              outline: "none",
-            }}
-          />
-        </label>
-
-        <label style={{ display: "grid", gap: 6 }}>
-          <span style={{ fontSize: 14, opacity: 0.8 }}>Contraseña</span>
-          <input
-            type="password"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            style={{
-              background: "rgba(255,255,255,.05)",
-              border: "1px solid rgba(255,255,255,.15)",
-              color: "inherit",
-              padding: "10px 12px",
-              borderRadius: 10,
-              outline: "none",
-            }}
-          />
-        </label>
-
-        <button
-          type="submit"
-          disabled={busy}
-          style={{
-            padding: "10px 14px",
-            borderRadius: 10,
-            border: "1px solid rgba(255,255,255,.15)",
-            background: "rgba(0, 122, 255, 0.15)",
-            fontWeight: 800,
-            cursor: "pointer",
-          }}
-        >
-          {busy ? "Entrando..." : "Entrar"}
+    <main style={{ maxWidth: 420, margin: "40px auto", padding: 16 }}>
+      <h1 style={{ margin: 0, marginBottom: 12 }}>Ingresar</h1>
+      <form onSubmit={submit} style={{ display: "grid", gap: 12 }}>
+        <input
+          type="email"
+          placeholder="email@dominio.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+          style={{ padding: 10, borderRadius: 8 }}
+        />
+        <input
+          type="password"
+          placeholder="Contraseña"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+          style={{ padding: 10, borderRadius: 8 }}
+        />
+        <button type="submit" disabled={busy} style={{ padding: 10, borderRadius: 8 }}>
+          {busy ? "Ingresando..." : "Ingresar"}
         </button>
-
-        <button
-          type="button"
-          onClick={doLogout}
-          style={{
-            padding: "10px 14px",
-            borderRadius: 10,
-            border: "1px solid rgba(255,255,255,.15)",
-            background: "rgba(255,255,255,.06)",
-            fontWeight: 700,
-            cursor: "pointer",
-          }}
-        >
-          Cerrar sesión
+        <button type="button" onClick={guest} disabled={busy} style={{ padding: 10, borderRadius: 8 }}>
+          Entrar como invitado
         </button>
-
-        <div style={{ fontSize: 12, opacity: 0.7, marginTop: 6 }}>
-          Redirige a: <code>{next}</code>
-        </div>
+        {msg && <div style={{ color: "salmon" }}>{msg}</div>}
       </form>
     </main>
   );

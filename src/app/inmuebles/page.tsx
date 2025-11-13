@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import CircularProgress from "@mui/material/CircularProgress";
-import Button from "@mui/material/Button";
 
 import FiltersBar, {
   FilterState,
@@ -13,6 +12,7 @@ import FiltersBar, {
   PropertyType,
 } from "@/components/FiltersBar";
 import PropertyCard from "@/components/cards/PropertyCard";
+import PlanesSection from "@/components/PlanesSection";
 
 type Item = {
   _id: string;
@@ -31,6 +31,7 @@ export default function InmueblesPage() {
   const [loading, setLoading] = useState(true);
   const [itemsAll, setItemsAll] = useState<Item[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [showPlanes, setShowPlanes] = useState(false);
 
   useEffect(() => {
     let ok = true;
@@ -53,7 +54,9 @@ export default function InmueblesPage() {
         setLoading(false);
       }
     })();
-    return () => { ok = false; };
+    return () => {
+      ok = false;
+    };
   }, []);
 
   const [initialMin, initialMax] = useMemo(() => {
@@ -79,7 +82,6 @@ export default function InmueblesPage() {
       const isDefault = f.price[0] === 0 && f.price[1] === 1000000;
       return isDefault ? { ...f, price: [initialMin, initialMax] } : f;
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialMin, initialMax]);
 
   const list = useMemo(() => {
@@ -90,21 +92,33 @@ export default function InmueblesPage() {
       const loc = (it.location || "").toLowerCase();
       const matchQ = !q || hay.includes(q) || loc.includes(q);
 
-      const plan: Plan = (it.agency?.plan as Plan) || "free";
+      // Normalizar sponsor -> pro para el filtrado
+      const itemPlan = it.agency?.plan === "sponsor" ? "pro" : it.agency?.plan;
+      const plan: Plan = (itemPlan as Plan) || "free";
       const matchPlan = filters.plan === "all" || plan === filters.plan;
 
-      const matchLoc = filters.location === "all" || it.location === filters.location;
+      const matchLoc =
+        filters.location === "all" || it.location === filters.location;
 
       const t: PropertyType = (it.propertyType as PropertyType) || "all";
       const matchType = filters.type === "all" || t === filters.type;
 
-      const rooms = typeof it.rooms === "number" ? it.rooms : undefined;
-      const matchRooms = filters.rooms === "all" ? true : rooms === Number(filters.rooms);
+      const rooms =
+        typeof it.rooms === "number" ? it.rooms : undefined;
+      const matchRooms =
+        filters.rooms === "all" ? true : rooms === Number(filters.rooms);
 
       const p = Number(it.price || 0);
       const matchPrice = p >= filters.price[0] && p <= filters.price[1];
 
-      return matchQ && matchPlan && matchLoc && matchType && matchRooms && matchPrice;
+      return (
+        matchQ &&
+        matchPlan &&
+        matchLoc &&
+        matchType &&
+        matchRooms &&
+        matchPrice
+      );
     });
 
     const sort: SortKey = filters.sort;
@@ -112,6 +126,7 @@ export default function InmueblesPage() {
       if (sort === "price_asc") return (a.price || 0) - (b.price || 0);
       if (sort === "price_desc") return (b.price || 0) - (a.price || 0);
       if (sort === "rooms_desc") return (b.rooms || 0) - (a.rooms || 0);
+
       const da = a.createdAt ? Date.parse(a.createdAt) : 0;
       const db = b.createdAt ? Date.parse(b.createdAt) : 0;
       return db - da;
@@ -121,10 +136,23 @@ export default function InmueblesPage() {
   }, [itemsAll, filters]);
 
   return (
-    <main style={{ padding: "24px 16px", maxWidth: 1200, margin: "0 auto" }}>
-      {/* Filtros arriba */}
-      <FiltersBar value={filters} onChange={setFilters} items={itemsAll} />
+    <main
+      style={{
+        padding: "0px 16px 24px",
+        maxWidth: 1200,
+        margin: "0 auto",
+      }}
+    >
 
+      {/* FILTROS */}
+      <FiltersBar
+        value={filters}
+        onChange={setFilters}
+        items={itemsAll}
+        onPlanesClick={() => setShowPlanes(true)}
+      />
+
+      {/* RESULTADOS */}
       {loading ? (
         <Box sx={{ display: "flex", justifyContent: "center", my: 4 }}>
           <CircularProgress />
@@ -138,10 +166,9 @@ export default function InmueblesPage() {
           No hay resultados con los filtros aplicados.
         </Typography>
       ) : (
-        /* 4 por fila en lg; 3 md; 2 sm; 1 xs */
         <Box
           sx={{
-            mt: 2,
+            mt: 0,
             display: "grid",
             gridTemplateColumns: {
               xs: "1fr",
@@ -150,7 +177,6 @@ export default function InmueblesPage() {
               lg: "repeat(4, 1fr)",
             },
             gap: 3,
-            alignItems: "stretch",
           }}
         >
           {list.map((it) => (
@@ -159,10 +185,8 @@ export default function InmueblesPage() {
         </Box>
       )}
 
-      {/* Solo admins ven el botón Publicar; si querés, sacalo de acá */}
-      <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 3 }}>
-        <Button href="/publicar" variant="contained">Publicar</Button>
-      </Box>
+      {/* MODAL PLANES */}
+      {showPlanes && <PlanesSection onClose={() => setShowPlanes(false)} />}
     </main>
   );
 }

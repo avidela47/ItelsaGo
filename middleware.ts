@@ -1,28 +1,29 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { verifySession } from "./src/lib/auth";
+
+export function middleware(req: NextRequest) {
+  const { pathname } = req.nextUrl;
+  const role = req.cookies.get("role")?.value || "guest";
+
+  const adminOnly =
+    pathname.startsWith("/panel") ||
+    pathname.startsWith("/publicar") ||
+    pathname.startsWith("/inmuebles/") && pathname.endsWith("/editar");
+
+  if (adminOnly && role !== "admin") {
+    const url = req.nextUrl.clone();
+    url.pathname = "/login";
+    return NextResponse.redirect(url);
+  }
+  return NextResponse.next();
+}
 
 export const config = {
   matcher: [
     "/panel/:path*",
     "/publicar",
-    // Agregá otras rutas privadas si querés
+    "/inmuebles/:id/editar",
   ],
 };
-
-export default function middleware(req: NextRequest) {
-  const token = req.cookies.get("session")?.value;
-  const session = verifySession(token);
-  const isAdmin = !!session && session.role === "admin";
-
-  if (!isAdmin) {
-    const url = req.nextUrl.clone();
-    url.pathname = "/login";
-    url.searchParams.set("next", req.nextUrl.pathname);
-    return NextResponse.redirect(url);
-  }
-
-  return NextResponse.next();
-}
 
 

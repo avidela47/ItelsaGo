@@ -1,40 +1,54 @@
-import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
+import { NextResponse, NextRequest } from "next/server";
+import { dbConnect } from "@/lib/mongo";
 import bcrypt from "bcryptjs";
 import User from "@/models/User";
-import { dbConnect } from "@/lib/mongo";
 
+/**
+ * POST /api/auth/register
+ * body: { name, email, password, role? }
+ * Sólo el primer usuario será admin automáticamente si no hay ninguno.
+ */
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const email: string = (body?.email || "").toLowerCase().trim();
-    const password: string = body?.password || "";
-    const name: string = (body?.name || "").trim();
-
-    if (!email || !password) {
-      return NextResponse.json({ ok: false, error: "Email y contraseña requeridos" }, { status: 400 });
-    }
-
     await dbConnect();
+    const { name, email, password, role } = await req.json();
 
-    // si no hay ningún usuario admin, el primero que se registre será admin
-    const adminExists = await User.exists({ role: "admin" });
-    const userExists = await User.findOne({ email });
-    if (userExists) {
-      return NextResponse.json({ ok: false, error: "Email ya registrado" }, { status: 400 });
+    if (!name || !email || !password) {
+      return NextResponse.json(
+        { error: "Nombre, email y contraseña requeridos" },
+        { status: 400 }
+      );
     }
 
-    const passwordHash = await bcrypt.hash(password, 12);
-    const role = adminExists ? "user" : "admin";
+    const exists = await User.findOne({ email });
+    if (exists) {
+      return NextResponse.json({ error: "El email ya está registrado" }, { status: 400 });
+    }
 
-    const user = await User.create({ email, passwordHash, name, role });
+    const count = await User.countDocuments();
+    const finalRole: "admin" | "user" =
+      count === 0 ? "admin" : role === "admin" ? "admin" : "user";
+
+    const hashed = await bcrypt.hash(password, 10);
+
+    const doc = await User.create({
+      name,
+      email,
+      password: hashed,
+      role: finalRole,
+    });
 
     return NextResponse.json({
       ok: true,
-      user: { id: user._id.toString(), email: user.email, name: user.name, role: user.role },
-      info: !adminExists ? "Primer usuario es ADMIN" : undefined,
+      id: String(doc._id),
+      role: finalRole,
     });
-  } catch (e: any) {
-    return NextResponse.json({ ok: false, error: "Error al registrar" }, { status: 500 });
+  } catch (err: any) {
+    return NextResponse.json(
+      { error: err?.message || "Error interno" },
+      { status: 500 }
+    );
   }
 }
+
+

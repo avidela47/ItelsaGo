@@ -1,14 +1,35 @@
-import mongoose, { Schema, models } from "mongoose";
+import mongoose, { Schema, Document, Model } from "mongoose";
 
-const UserSchema = new Schema(
+export type UserRole = "user" | "inmobiliaria" | "admin";
+
+export interface IUser extends Document {
+  name?: string;
+  email: string;
+  password: string;
+  role: UserRole;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+const UserSchema = new Schema<IUser>(
   {
-    name: { type: String },
-    email: { type: String, unique: true, index: true },
-    password: { type: String }, // hashed
-    role: { type: String, enum: ["admin", "user"], default: "user" },
+    name: { type: String, trim: true },
+    email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+    password: { type: String, required: true },
+    role: {
+      type: String,
+      enum: ["user", "inmobiliaria", "admin"],
+      default: "user", // 👈 todos los registros nuevos entran como user
+    },
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+  }
 );
 
-const User = models.User || mongoose.model("User", UserSchema);
+const User: Model<IUser> =
+  mongoose.models.User || mongoose.model<IUser>("User", UserSchema);
+
 export default User;
+
+

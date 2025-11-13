@@ -7,11 +7,13 @@ export default function RegisterPage() {
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
 
-  async function onSubmit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (busy) return;
     setBusy(true);
+    setMsg(null);
     try {
       const res = await fetch("/api/auth/register", {
         method: "POST",
@@ -19,98 +21,46 @@ export default function RegisterPage() {
         body: JSON.stringify({ email, password, name }),
       });
       const data = await res.json();
-      if (res.ok && data?.ok) {
-        alert(data?.info ? `${data.info}\nRegistrado con éxito.` : "Registrado con éxito.");
-        window.location.href = "/login";
-      } else {
-        alert(data?.error || "No se pudo registrar");
-      }
+      if (!res.ok) setMsg(data?.error || "Error");
+      else window.location.href = "/login";
+    } catch {
+      setMsg("Error de red");
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <main style={{ padding: "24px 16px", maxWidth: 420, margin: "0 auto" }}>
-      <h1 style={{ margin: 0, fontSize: 24, fontWeight: 800 }}>Crear cuenta</h1>
-      <p style={{ opacity: .75, marginTop: 6 }}>
-        El <b>primer registro</b> del sistema queda como <b>ADMIN</b>. Luego, los siguientes serán <b>USER</b>.
-      </p>
-
-      <form onSubmit={onSubmit} style={{ display: "grid", gap: 12, marginTop: 16 }}>
-        <label style={{ display: "grid", gap: 6 }}>
-          <span style={{ fontSize: 14, opacity: .8 }}>Nombre</span>
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Tu nombre"
-            style={{
-              background: "rgba(255,255,255,.05)",
-              border: "1px solid rgba(255,255,255,.15)",
-              color: "inherit",
-              padding: "10px 12px",
-              borderRadius: 10,
-              outline: "none",
-            }}
-          />
-        </label>
-
-        <label style={{ display: "grid", gap: 6 }}>
-          <span style={{ fontSize: 14, opacity: .8 }}>Email</span>
-          <input
-            type="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="admin@tu-dominio.com"
-            style={{
-              background: "rgba(255,255,255,.05)",
-              border: "1px solid rgba(255,255,255,.15)",
-              color: "inherit",
-              padding: "10px 12px",
-              borderRadius: 10,
-              outline: "none",
-            }}
-          />
-        </label>
-
-        <label style={{ display: "grid", gap: 6 }}>
-          <span style={{ fontSize: 14, opacity: .8 }}>Contraseña</span>
-          <input
-            type="password"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            style={{
-              background: "rgba(255,255,255,.05)",
-              border: "1px solid rgba(255,255,255,.15)",
-              color: "inherit",
-              padding: "10px 12px",
-              borderRadius: 10,
-              outline: "none",
-            }}
-          />
-        </label>
-
-        <button
-          type="submit"
-          disabled={busy}
-          style={{
-            padding: "10px 14px",
-            borderRadius: 10,
-            border: "1px solid rgba(255,255,255,.15)",
-            background: "rgba(16, 185, 129, 0.18)",
-            fontWeight: 800,
-            cursor: "pointer",
-          }}
-        >
+    <main style={{ maxWidth: 420, margin: "40px auto", padding: 16 }}>
+      <h1 style={{ margin: 0, marginBottom: 12 }}>Crear cuenta</h1>
+      <form onSubmit={submit} style={{ display: "grid", gap: 12 }}>
+        <input
+          type="text"
+          placeholder="Nombre (opcional)"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          style={{ padding: 10, borderRadius: 8 }}
+        />
+        <input
+          type="email"
+          placeholder="email@dominio.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+          style={{ padding: 10, borderRadius: 8 }}
+        />
+        <input
+          type="password"
+          placeholder="Contraseña"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+          style={{ padding: 10, borderRadius: 8 }}
+        />
+        <button type="submit" disabled={busy} style={{ padding: 10, borderRadius: 8 }}>
           {busy ? "Creando..." : "Crear cuenta"}
         </button>
-
-        <div style={{ fontSize: 12, opacity: .7, marginTop: 6 }}>
-          Luego entrá en <a href="/login">/login</a>
-        </div>
+        {msg && <div style={{ color: "salmon" }}>{msg}</div>}
       </form>
     </main>
   );

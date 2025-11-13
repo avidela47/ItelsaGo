@@ -6,7 +6,7 @@ import Chip from "@mui/material/Chip";
 import Button from "@mui/material/Button";
 import WhatsAppIcon from "@mui/icons-material/WhatsApp";
 
-type Plan = "premium" | "sponsor" | "free";
+type Plan = "premium" | "pro" | "free";
 
 type Item = {
   _id: string;
@@ -34,14 +34,11 @@ function money(n: number, currency: string) {
 }
 
 export default function PropertyCard({ item }: { item: Item }) {
-  const isNuevo = (() => {
-    if (!item?.createdAt) return false;
-    const d = Date.parse(item.createdAt);
-    return Date.now() - d < 1000 * 60 * 60 * 24 * 30; // 30 días
-  })();
-
   const img = item.images?.[0] || "/placeholder.jpg";
   const url = `/inmuebles/${item._id}`;
+
+  // Normalizar sponsor -> pro para compatibilidad
+  const plan = item.agency?.plan === "sponsor" ? "pro" : item.agency?.plan;
 
   const waHref = (() => {
     const number = item?.agency?.whatsapp?.replace(/[^\d+]/g, "") || "";
@@ -76,29 +73,21 @@ export default function PropertyCard({ item }: { item: Item }) {
           style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
         />
 
-        {/* BADGE NUEVO → ARRIBA IZQUIERDA */}
-        {isNuevo && (
-          <Box sx={{ position: "absolute", top: 8, left: 8 }}>
-            <Chip
-              label="NUEVO"
-              size="small"
-              color="success"
-              sx={{ fontWeight: 800, height: 20, fontSize: 11, px: 0.6 }}
-            />
-          </Box>
-        )}
-
         {/* BADGE PLAN → ARRIBA DERECHA */}
-        {item.agency?.plan && (
+        {plan && (
           <Box sx={{ position: "absolute", top: 8, right: 8 }}>
             <Chip
-              label={item.agency.plan.toUpperCase()}
+              label={plan.toUpperCase()}
               size="small"
-              color={
-                item.agency.plan === "premium" ? "warning" :
-                item.agency.plan === "sponsor" ? "info" : "default"
-              }
-              sx={{ fontWeight: 800, height: 20, fontSize: 11, px: 0.6 }}
+              sx={{
+                fontWeight: 800,
+                height: 20,
+                fontSize: 11,
+                px: 0.6,
+                background: plan === "premium" ? "#D9A441" : plan === "pro" ? "#2A6EBB" : "#4CAF50",
+                color: "#ffffff",
+                border: "none",
+              }}
             />
           </Box>
         )}
@@ -182,10 +171,17 @@ export default function PropertyCard({ item }: { item: Item }) {
           size="small"
           startIcon={<WhatsAppIcon />}
           sx={{
-            background: "#128C7E",
-            "&:hover": { background: "#0F776C" },
+            background: "linear-gradient(135deg,rgba(0,208,255,.25),rgba(0,255,225,.18))",
+            border: "1px solid rgba(0,208,255,.45)",
+            color: "#e9eef5",
+            borderRadius: 2.5,
             textTransform: "none",
             fontWeight: 800,
+            transition: "background .15s ease, transform .15s ease",
+            "&:hover": {
+              background: "linear-gradient(135deg,rgba(0,208,255,.35),rgba(0,255,225,.28))",
+              transform: "translateY(-1px)",
+            },
           }}
           onClick={(e) => {
             e.preventDefault();
