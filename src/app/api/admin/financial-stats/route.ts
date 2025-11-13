@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
 import { dbConnect } from "@/lib/mongo";
-import User from "@/models/User";
+import Listing from "@/models/Listing";
 
 /**
  * GET /api/admin/financial-stats
  * Devuelve estadísticas financieras para el dashboard admin:
- * - Ingresos mensuales recurrentes (MRR)
+ * - Ingresos mensuales recurrentes (MRR) basados en listings
  * - Ingresos anuales proyectados (ARR)
  * - Distribución por plan (PRO/PREMIUM)
- * - Nuevas suscripciones este mes
+ * - Nuevas publicaciones este mes
  * - Tendencia últimos 6 meses
  */
 
@@ -16,14 +16,15 @@ const PLAN_PRICES = {
   free: 0,
   pro: 100,
   premium: 500,
+  sponsor: 100, // Alias de pro
 };
 
 export async function GET() {
   try {
     await dbConnect();
 
-    // Obtener todas las agencies (users con role=agency)
-    const agencies = await User.find({ role: "agency" }).lean();
+    // Obtener todos los listings activos con sus planes
+    const listings = await Listing.find({}).select("agency createdAt").lean();
 
     // Calcular MRR (Monthly Recurring Revenue)
     let mrrTotal = 0;
@@ -32,16 +33,17 @@ export async function GET() {
     let countPro = 0;
     let countPremium = 0;
 
-    agencies.forEach((agency: any) => {
-      const plan = agency.plan || "free";
-      const price = PLAN_PRICES[plan as keyof typeof PLAN_PRICES] || 0;
+    listings.forEach((listing: any) => {
+      const plan = listing.agency?.plan || "free";
+      const normalizedPlan = plan === "sponsor" ? "pro" : plan;
+      const price = PLAN_PRICES[normalizedPlan as keyof typeof PLAN_PRICES] || 0;
       
       mrrTotal += price;
       
-      if (plan === "pro") {
+      if (normalizedPlan === "pro") {
         mrrPro += price;
         countPro++;
-      } else if (plan === "premium") {
+      } else if (normalizedPlan === "premium") {
         mrrPremium += price;
         countPremium++;
       }
@@ -50,33 +52,51 @@ export async function GET() {
     // ARR (Annual Recurring Revenue)
     const arr = mrrTotal * 12;
 
-    // Nuevas suscripciones este mes (PRO y PREMIUM)
+    // Nuevas publicaciones este mes (PRO y PREMIUM)
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     
-    const newSubscriptions = agencies.filter((agency: any) => {
-      if (!agency.subscriptionDate) return false;
-      const subDate = new Date(agency.subscriptionDate);
-      return subDate >= startOfMonth && (agency.plan === "pro" || agency.plan === "premium");
+    const newListings = listings.filter((listing: any) => {
+      if (!listing.createdAt) return false;
+      const createDate = new Date(listing.createdAt);
+      const plan = listing.agency?.plan || "free";
+      const normalizedPlan = plan === "sponsor" ? "pro" : plan;
+      return createDate >= startOfMonth && (normalizedPlan === "pro" || normalizedPlan === "premium");
     });
 
-    const newSubsPro = newSubscriptions.filter((a: any) => a.plan === "pro").length;
-    const newSubsPremium = newSubscriptions.filter((a: any) => a.plan === "premium").length;
+    const newPro = newListings.filter((l: any) => {
+      const plan = l.agency?.plan || "free";
+      return plan === "pro" || plan === "sponsor";
+    }).length;
+    
+    const newPremium = newListings.filter((l: any) => 
+      l.agency?.plan === "premium"
+    ).length;
 
-    // Tendencia últimos 6 meses (simulado por ahora)
-    // En producción, esto debería calcularse con datos históricos reales
+    // Tendencia últimos 6 meses
     const last6Months: Array<{ month: string; revenue: number }> = [];
     for (let i = 5; i >= 0; i--) {
       const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const nextMonth = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
       const monthName = date.toLocaleDateString("es-AR", { month: "short" });
       
-      // Simulamos un crecimiento gradual (en producción usarías datos reales)
-      const factor = 0.7 + (i * 0.05); // Crece del 70% al 95% del MRR actual
-      const revenue = Math.round(mrrTotal * factor);
+      // Calcular ingresos de ese mes basado en listings creados hasta esa fecha
+      const listingsUntilMonth = listings.filter((l: any) => {
+        if (!l.createdAt) return false;
+        const createDate = new Date(l.createdAt);
+        return createDate < nextMonth;
+      });
+      
+      let monthRevenue = 0;
+      listingsUntilMonth.forEach((l: any) => {
+        const plan = l.agency?.plan || "free";
+        const normalizedPlan = plan === "sponsor" ? "pro" : plan;
+        monthRevenue += PLAN_PRICES[normalizedPlan as keyof typeof PLAN_PRICES] || 0;
+      });
       
       last6Months.push({
         month: monthName,
-        revenue,
+        revenue: monthRevenue,
       });
     }
 
@@ -95,9 +115,9 @@ export async function GET() {
           total: countPro + countPremium,
         },
         newThisMonth: {
-          pro: newSubsPro,
-          premium: newSubsPremium,
-          total: newSubsPro + newSubsPremium,
+          pro: newPro,
+          premium: newPremium,
+          total: newPro + newPremium,
         },
         trend: last6Months,
       },
