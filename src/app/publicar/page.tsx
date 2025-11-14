@@ -9,6 +9,10 @@ import MenuItem from "@mui/material/MenuItem";
 import Typography from "@mui/material/Typography";
 import Alert from "@mui/material/Alert";
 import CircularProgress from "@mui/material/CircularProgress";
+import Card from "@mui/material/Card";
+import CardContent from "@mui/material/CardContent";
+import Chip from "@mui/material/Chip";
+import LinearProgress from "@mui/material/LinearProgress";
 
 type Role = "guest" | "user" | "agency" | "admin";
 type Plan = "free" | "pro" | "premium";
@@ -39,6 +43,11 @@ export default function PublicarPage() {
   const [error, setError] = useState<string | null>(null);
   const [okMsg, setOkMsg] = useState<string | null>(null);
   const [agencyName, setAgencyName] = useState<string>(""); // Nombre de la inmobiliaria
+  
+  // Info del plan y límites
+  const [agencyPlan, setAgencyPlan] = useState<Plan>("free");
+  const [propertiesCount, setPropertiesCount] = useState<number>(0);
+  const [propertiesLimit, setPropertiesLimit] = useState<number>(3);
 
   const [title, setTitle] = useState("");
   const [location, setLocation] = useState("");
@@ -58,13 +67,30 @@ export default function PublicarPage() {
       router.replace("/login?from=publicar");
     }
     
-    // Si es agency, obtener el nombre de la inmobiliaria
+    // Si es agency, obtener el nombre de la inmobiliaria y el plan
     if (r === "agency") {
       const name = window.localStorage.getItem("name") || 
                    document.cookie.match(/(?:^|;)\s*name=([^;]+)/)?.[1] || "";
       setAgencyName(decodeURIComponent(name));
+      
+      // Obtener info del plan y propiedades
+      fetchAgencyInfo();
     }
   }, [router]);
+
+  async function fetchAgencyInfo() {
+    try {
+      const res = await fetch("/api/user/agency-info");
+      if (res.ok) {
+        const data = await res.json();
+        setAgencyPlan(data.plan || "free");
+        setPropertiesCount(data.propertiesCount || 0);
+        setPropertiesLimit(data.limit || 3);
+      }
+    } catch (e) {
+      console.error("Error obteniendo info de agency:", e);
+    }
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -160,11 +186,69 @@ export default function PublicarPage() {
     );
   }
 
+  const getPlanColor = (plan: string) => {
+    if (plan === "premium") return "#D9A441";
+    if (plan === "pro") return "#2A6EBB";
+    return "#4CAF50";
+  };
+
+  const remaining = propertiesLimit - propertiesCount;
+  const percentageUsed = (propertiesCount / propertiesLimit) * 100;
+
   return (
     <main style={{ padding: "24px 16px", maxWidth: 900, margin: "0 auto" }}>
       <Typography variant="h4" fontWeight={800} sx={{ mb: 2 }}>
         Publicar inmueble
       </Typography>
+
+      {/* Indicador de plan (solo para agencies) */}
+      {role === "agency" && (
+        <Card sx={{ mb: 3, bgcolor: "rgba(255,255,255,.03)", border: "1px solid rgba(255,255,255,.08)" }}>
+          <CardContent>
+            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 2 }}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                <Typography variant="h6" fontWeight={700}>Tu Plan</Typography>
+                <Chip
+                  label={agencyPlan.toUpperCase()}
+                  sx={{
+                    bgcolor: getPlanColor(agencyPlan),
+                    color: "#fff",
+                    fontWeight: 700,
+                  }}
+                />
+              </Box>
+              <Typography variant="h6" fontWeight={700}>
+                {propertiesCount} / {propertiesLimit === 999999 ? "∞" : propertiesLimit}
+              </Typography>
+            </Box>
+            
+            <LinearProgress 
+              variant="determinate" 
+              value={Math.min(percentageUsed, 100)}
+              sx={{
+                height: 8,
+                borderRadius: 4,
+                bgcolor: "rgba(255,255,255,.1)",
+                "& .MuiLinearProgress-bar": {
+                  bgcolor: getPlanColor(agencyPlan),
+                },
+              }}
+            />
+            
+            <Typography variant="body2" sx={{ mt: 1, color: "text.secondary" }}>
+              {remaining > 0 ? (
+                <>
+                  Te {remaining === 1 ? "queda" : "quedan"} <strong>{remaining}</strong> {remaining === 1 ? "propiedad" : "propiedades"} disponible{remaining === 1 ? "" : "s"}
+                </>
+              ) : propertiesLimit === 999999 ? (
+                <>Propiedades ilimitadas</>
+              ) : (
+                <>⚠️ Alcanzaste el límite de tu plan. Contactá al administrador para subir de plan.</>
+              )}
+            </Typography>
+          </CardContent>
+        </Card>
+      )}
 
       {error && (
         <Alert severity="error" sx={{ mb: 2 }}>
