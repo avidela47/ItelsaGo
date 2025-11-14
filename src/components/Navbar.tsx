@@ -2,55 +2,176 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import Box from "@mui/material/Box";
-import { usePathname } from "next/navigation";
-import styles from "./Navbar.module.css";
+import { useEffect, useState } from "react";
 
 export default function Navbar() {
-  const pathname = usePathname();
+  const [role, setRole] = useState<string | null>(null);
 
-  const NavBtn = ({
-    href,
-    label,
-  }: {
-    href: string;
-    label: string;
-  }) => {
-    const active = pathname?.startsWith(href);
-    return (
-      <Link
-        href={href}
-        className={`${styles.navBtn} ${active ? styles.active : ""}`}
-      >
-        {label}
-      </Link>
-    );
+  useEffect(() => {
+    // Leer rol del localStorage
+    const checkRole = () => {
+      const r = window.localStorage.getItem("role");
+      setRole(r);
+    };
+    
+    checkRole();
+    
+    // Escuchar cambios en localStorage
+    window.addEventListener("storage", checkRole);
+    
+    return () => {
+      window.removeEventListener("storage", checkRole);
+    };
+  }, []);
+
+  // BOTÓN VERDE ITELSA
+  const baseBtn: React.CSSProperties = {
+    background: "linear-gradient(135deg,rgba(0,208,255,.25),rgba(0,255,225,.18))",
+    border: "1px solid rgba(0,208,255,.45)",
+    color: "#e9eef5",
+    padding: "6px 16px",
+    borderRadius: 10,
+    fontWeight: 700,
+    fontSize: 13,
+    textDecoration: "none",
+    cursor: "pointer",
+    boxShadow: "0 0 6px rgba(0,0,0,0.35)",
+    transition: "background .15s ease, transform .15s ease",
+  };
+
+  const hoverBtn: React.CSSProperties = {
+    background: "linear-gradient(135deg,rgba(0,208,255,.35),rgba(0,255,225,.28))",
+    transform: "translateY(-1px)",
+    boxShadow: "0 0 10px rgba(0,0,0,0.55)",
   };
 
   return (
-    <header className={styles.header}>
-      <Box className={styles.wrap}>
-        {/* Logo */}
-        <Link href="/" className={styles.brand} aria-label="Inicio">
-          <Image
-            src="/logo-itelsa-go.svg"
-            alt="ITELSA Go"
-            width={150}
-            height={32}
-            priority
-            className={styles.brandImg}
-          />
-        </Link>
+    <header
+      style={{
+        width: "100%",
+        padding: "12px 32px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        background: "transparent",
+      }}
+    >
+      {/* LOGO */}
+      <Link href="/inmuebles" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <Image
+          src="/logo-itelsa-go.svg"
+          alt="ITELSA GO"
+          width={140}
+          height={40}
+          priority
+        />
+      </Link>
 
-        <nav className={styles.nav}>
-          <NavBtn href="/inmuebles" label="Inmuebles" />
-          <NavBtn href="/publicar" label="Publicar" />
-          <NavBtn href="/panel" label="Panel" />
-        </nav>
-      </Box>
+      {/* ROLES */}
+      <nav style={{ display: "flex", alignItems: "center", gap: 10 }}>
+
+        {!role && (
+          <Link
+            href="/login"
+            style={baseBtn}
+            onMouseEnter={(e) => Object.assign(e.currentTarget.style, hoverBtn)}
+            onMouseLeave={(e) => Object.assign(e.currentTarget.style, baseBtn)}
+          >
+            Ingresar
+          </Link>
+        )}
+
+        {role === "user" && (
+          <button
+            onClick={() => {
+              localStorage.clear();
+              window.location.href = "/inmuebles";
+            }}
+            style={baseBtn}
+            onMouseEnter={(e) => Object.assign(e.currentTarget.style, hoverBtn)}
+            onMouseLeave={(e) => Object.assign(e.currentTarget.style, baseBtn)}
+          >
+            Salir
+          </button>
+        )}
+
+        {role === "agency" && (
+          <>
+            <Link
+              href="/publicar"
+              style={baseBtn}
+              onMouseEnter={(e) =>
+                Object.assign(e.currentTarget.style, hoverBtn)
+              }
+              onMouseLeave={(e) =>
+                Object.assign(e.currentTarget.style, baseBtn)
+              }
+            >
+              Publicar
+            </Link>
+
+            <button
+              onClick={() => {
+                localStorage.clear();
+                window.location.href = "/inmuebles";
+              }}
+              style={baseBtn}
+              onMouseEnter={(e) => Object.assign(e.currentTarget.style, hoverBtn)}
+              onMouseLeave={(e) => Object.assign(e.currentTarget.style, baseBtn)}
+            >
+              Salir
+            </button>
+          </>
+        )}
+
+        {role === "admin" && (
+          <>
+            <Link
+              href="/publicar"
+              style={baseBtn}
+              onMouseEnter={(e) =>
+                Object.assign(e.currentTarget.style, hoverBtn)
+              }
+              onMouseLeave={(e) =>
+                Object.assign(e.currentTarget.style, baseBtn)
+              }
+            >
+              Publicar
+            </Link>
+
+            <Link
+              href="/panel"
+              style={baseBtn}
+              onMouseEnter={(e) =>
+                Object.assign(e.currentTarget.style, hoverBtn)
+              }
+              onMouseLeave={(e) =>
+                Object.assign(e.currentTarget.style, baseBtn)
+              }
+            >
+              Panel
+            </Link>
+
+            <button
+              onClick={() => {
+                localStorage.clear();
+                window.location.href = "/inmuebles";
+              }}
+              style={baseBtn}
+              onMouseEnter={(e) => Object.assign(e.currentTarget.style, hoverBtn)}
+              onMouseLeave={(e) => Object.assign(e.currentTarget.style, baseBtn)}
+            >
+              Salir
+            </button>
+          </>
+        )}
+      </nav>
     </header>
   );
 }
+
+
+
 
 
 

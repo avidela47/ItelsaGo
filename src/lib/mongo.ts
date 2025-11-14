@@ -1,33 +1,39 @@
 import mongoose from "mongoose";
 
-const MONGODB_URI = process.env.MONGODB_URI!;
+const MONGODB_URI = process.env.MONGODB_URI;
+
 if (!MONGODB_URI) {
-  throw new Error("⛔ Falta MONGODB_URI en el .env");
+  throw new Error("⚠️ MONGODB_URI no está definida en el .env");
 }
 
-type TMongooseCache = {
+type MongooseCache = {
   conn: typeof mongoose | null;
   promise: Promise<typeof mongoose> | null;
 };
 
-let cached: TMongooseCache = (global as any).mongoose;
+declare global {
+  // eslint-disable-next-line no-var
+  var mongooseCache: MongooseCache | undefined;
+}
+
+let cached = global.mongooseCache;
+
 if (!cached) {
-  cached = (global as any).mongoose = { conn: null, promise: null };
+  cached = { conn: null, promise: null };
+  global.mongooseCache = cached;
 }
 
-export async function dbConnect() {
-  if (cached.conn) return cached.conn;
+export async function dbConnect(): Promise<typeof mongoose> {
+  if (cached!.conn) return cached!.conn;
 
-  if (!cached.promise) {
-    cached.promise = mongoose.connect(MONGODB_URI).then((m) => m);
+  if (!cached!.promise) {
+    // 👇 acá forzamos a string para que TS no rompa
+    cached!.promise = mongoose.connect(MONGODB_URI as string);
   }
-  cached.conn = await cached.promise;
-  return cached.conn;
+
+  cached!.conn = await cached!.promise;
+  return cached!.conn!;
 }
-
-// Para que funcione tanto `import { dbConnect }` como `import dbConnect`
-export default dbConnect;
-
 
 
 

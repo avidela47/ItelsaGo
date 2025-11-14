@@ -1,15 +1,12 @@
-// src/lib/auth.ts
 import type { NextRequest } from "next/server";
 
-/** SERVER: valida admin por cookie en request */
+export function getRoleFromRequest(req: NextRequest): "admin" | "user" | "guest" {
+  const cookie = req.cookies.get("role")?.value || "guest";
+  if (cookie === "admin") return "admin";
+  if (cookie === "user") return "user";
+  return "guest";
+}
+
 export function isAdminFromRequest(req: NextRequest): boolean {
-  const role = req.cookies.get("role")?.value || "guest";
-  return role === "admin";
+  return getRoleFromRequest(req) === "admin";
 }
-
-/** CLIENT: chequeo simple por cookie (para Navbar, etc.) */
-export function isAdminFromBrowser(): boolean {
-  if (typeof document === "undefined") return false;
-  return document.cookie.split("; ").some((c) => c.startsWith("role=admin"));
-}
-

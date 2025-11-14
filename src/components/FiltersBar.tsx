@@ -13,11 +13,12 @@ import {
   Chip,
   IconButton,
   Tooltip,
+  Button,
 } from "@mui/material";
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
 import ClearRoundedIcon from "@mui/icons-material/ClearRounded";
 
-export type Plan = "all" | "premium" | "sponsor" | "free";
+export type Plan = "all" | "premium" | "pro" | "free";
 export type PropertyType = "all" | "depto" | "casa" | "lote" | "local";
 export type SortKey = "recent" | "price_asc" | "price_desc" | "rooms_desc";
 
@@ -39,7 +40,7 @@ type Item = {
   location: string;
   rooms?: number;
   propertyType?: "depto" | "casa" | "lote" | "local";
-  agency?: { plan?: "premium" | "sponsor" | "free" };
+  agency?: { plan?: "premium" | "pro" | "sponsor" | "free" };
   createdAt?: string;
 };
 
@@ -47,13 +48,14 @@ type Props = {
   value: FilterState;
   onChange: (f: FilterState) => void;
   items: Item[];
+  onPlanesClick: () => void;
 };
 
 function numberOrZero(n?: number) {
   return typeof n === "number" && !Number.isNaN(n) ? n : 0;
 }
 
-export default function FiltersBar({ value, onChange, items }: Props) {
+export default function FiltersBar({ value, onChange, items, onPlanesClick }: Props) {
   // Opciones dinámicas a partir de los datos
   const { minPrice, maxPrice, locations, types } = useMemo(() => {
     const prices = items.map((i) => numberOrZero(i.price)).filter((n) => n > 0);
@@ -111,7 +113,7 @@ export default function FiltersBar({ value, onChange, items }: Props) {
         gap: 1.5,
         gridTemplateColumns: {
           xs: "1fr",
-          md: "1.6fr auto auto auto",
+          md: "1fr auto auto auto auto",
         },
         alignItems: "center",
         mb: 2,
@@ -162,18 +164,82 @@ export default function FiltersBar({ value, onChange, items }: Props) {
         </Select>
       </FormControl>
 
+      {/* BOTÓN PLANES */}
+      <Button
+        variant="contained"
+        size="medium"
+        onClick={onPlanesClick}
+        sx={{
+          background: "linear-gradient(135deg,rgba(0,208,255,.25),rgba(0,255,225,.18))",
+          border: "1px solid rgba(0,208,255,.45)",
+          color: "#e9eef5",
+          fontWeight: 700,
+          textTransform: "none",
+          whiteSpace: "nowrap",
+          px: 3,
+          "&:hover": {
+            background: "linear-gradient(135deg,rgba(0,208,255,.35),rgba(0,255,225,.28))",
+          },
+        }}
+      >
+        Planes
+      </Button>
+
       {/* PLAN (chips) */}
       <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
-        {(["all", "premium", "sponsor", "free"] as Plan[]).map((p) => (
-          <Chip
-            key={p}
-            label={p === "all" ? "Todos" : p.toUpperCase()}
-            variant={value.plan === p ? "filled" : "outlined"}
-            color={value.plan === p ? "primary" : "default"}
-            onClick={() => set("plan", p)}
-            sx={{ fontWeight: 700 }}
-          />
-        ))}
+        {(["all", "premium", "pro", "free"] as Plan[]).map((p) => {
+          const planColors = {
+            all: { 
+              bg: "linear-gradient(135deg,rgba(0,208,255,.25),rgba(0,255,225,.18))", 
+              border: "rgba(0,208,255,.45)",
+              solid: "#00d0ff"
+            },
+            premium: { 
+              bg: "#D9A441", 
+              border: "#D9A441",
+              solid: "#D9A441"
+            },
+            pro: { 
+              bg: "#2A6EBB", 
+              border: "#2A6EBB",
+              solid: "#2A6EBB"
+            },
+            free: { 
+              bg: "#4CAF50", 
+              border: "#4CAF50",
+              solid: "#4CAF50"
+            },
+          };
+          
+          return (
+            <Chip
+              key={p}
+              label={p === "all" ? "Todos" : p.toUpperCase()}
+              variant={value.plan === p ? "filled" : "outlined"}
+              color="default"
+              onClick={() => set("plan", p)}
+              sx={{
+                fontWeight: 700,
+                ...(value.plan === p && {
+                  background: planColors[p].bg,
+                  border: `1px solid ${planColors[p].border}`,
+                  color: "#ffffff",
+                  "&:hover": {
+                    background: planColors[p].solid,
+                    opacity: 0.9,
+                  },
+                }),
+                ...(!value.plan || value.plan !== p) && {
+                  borderColor: planColors[p].border,
+                  color: planColors[p].solid,
+                  "&:hover": {
+                    background: `${planColors[p].solid}20`,
+                  },
+                },
+              }}
+            />
+          );
+        })}
       </Box>
 
       {/* RESET */}

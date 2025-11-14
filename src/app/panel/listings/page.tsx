@@ -15,8 +15,10 @@ import TableRow from "@mui/material/TableRow";
 import Chip from "@mui/material/Chip";
 import DeleteRoundedIcon from "@mui/icons-material/DeleteRounded";
 import EditRoundedIcon from "@mui/icons-material/EditRounded";
+import BlockIcon from "@mui/icons-material/Block";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CircularProgress from "@mui/material/CircularProgress";
-import ConfirmDeleteDialog from "@/components/ConfirmDeleteDialog";
+import ConfirmDeleteDialog from "@/components/cards/ConfirmDeleteDialog";
 
 type Item = {
   _id: string;
@@ -26,7 +28,8 @@ type Item = {
   location: string;
   rooms?: number;
   propertyType?: "depto" | "casa" | "lote" | "local";
-  agency?: { logo?: string; plan?: "premium" | "sponsor" | "free" };
+  agency?: { logo?: string; plan?: "premium" | "sponsor" | "pro" | "free" };
+  status?: "active" | "suspended";
   createdAt?: string;
 };
 
@@ -39,7 +42,7 @@ export default function AdminListingsPage() {
   async function load() {
     setLoading(true);
     try {
-      const res = await fetch("/api/listings", { cache: "no-store" });
+      const res = await fetch("/api/listings?showAll=true", { cache: "no-store" });
       const data = await res.json();
       setItems(data?.items || []);
     } finally {
@@ -64,6 +67,24 @@ export default function AdminListingsPage() {
     }
   }
 
+  async function toggleStatus(id: string) {
+    try {
+      const res = await fetch(`/api/listings/${id}/toggle-status`, { method: "PATCH" });
+      const data = await res.json();
+      
+      if (res.ok) {
+        // Actualizar el item en el estado
+        setItems(prev => prev.map(item => 
+          item._id === id ? { ...item, status: data.status } : item
+        ));
+      } else {
+        alert(data.error || "Error al cambiar estado");
+      }
+    } catch (err) {
+      alert("Error al cambiar estado");
+    }
+  }
+
   return (
     <Box sx={{ display: "grid", gap: 2 }}>
       <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
@@ -85,6 +106,7 @@ export default function AdminListingsPage() {
               <TableCell>Precio</TableCell>
               <TableCell>Plan</TableCell>
               <TableCell>Tipo</TableCell>
+              <TableCell>Estado</TableCell>
               <TableCell align="right">Acciones</TableCell>
             </TableRow>
           </TableHead>
@@ -102,7 +124,22 @@ export default function AdminListingsPage() {
                   />
                 </TableCell>
                 <TableCell>{it.propertyType || "-"}</TableCell>
+                <TableCell>
+                  <Chip
+                    size="small"
+                    label={it.status === "suspended" ? "SUSPENDIDO" : "ACTIVO"}
+                    color={it.status === "suspended" ? "error" : "success"}
+                  />
+                </TableCell>
                 <TableCell align="right">
+                  <IconButton
+                    size="small"
+                    color={it.status === "suspended" ? "success" : "warning"}
+                    onClick={() => toggleStatus(it._id)}
+                    title={it.status === "suspended" ? "Activar" : "Suspender"}
+                  >
+                    {it.status === "suspended" ? <CheckCircleIcon /> : <BlockIcon />}
+                  </IconButton>
                   <Link href={`/panel/listings/${it._id}`}><IconButton size="small"><EditRoundedIcon /></IconButton></Link>
                   <IconButton size="small" color="error" onClick={() => setDelId(it._id)}><DeleteRoundedIcon /></IconButton>
                 </TableCell>

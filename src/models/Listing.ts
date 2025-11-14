@@ -1,14 +1,5 @@
 import mongoose, { Schema, models, model } from "mongoose";
 
-const AgencySchema = new Schema(
-  {
-    logo: { type: String },
-    plan: { type: String, enum: ["premium", "sponsor", "free"], default: "free" },
-    whatsapp: { type: String, default: "" }, // ✅ NUEVO
-  },
-  { _id: false }
-);
-
 const ListingSchema = new Schema(
   {
     title: { type: String, required: true, trim: true },
@@ -20,7 +11,8 @@ const ListingSchema = new Schema(
     operationType: { type: String, enum: ["venta", "alquiler", "temporario"], default: "venta" },
     images: { type: [String], default: [] },
     description: { type: String, default: "" },
-    agency: { type: AgencySchema, default: { plan: "free" } },
+    agency: { type: Schema.Types.ObjectId, ref: "Agency" }, // Referencia a la colección Agency
+    status: { type: String, enum: ["active", "suspended"], default: "active" },
   },
   { timestamps: true }
 );

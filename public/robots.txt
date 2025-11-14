@@ -1,0 +1,15 @@
+# robots.txt para ITELSA Go
+
+# Permitir todo a todos los crawlers
+User-agent: *
+Allow: /
+
+# Bloquear panel de administración
+Disallow: /panel/
+Disallow: /api/admin/
+
+# Ubicación del sitemap
+Sitemap: http://localhost:3000/sitemap.xml
+
+# Cuando subas a producción, cambiá localhost por tu dominio real
+# Sitemap: https://itelsago.com/sitemap.xml
