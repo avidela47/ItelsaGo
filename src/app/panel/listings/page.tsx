@@ -13,10 +13,15 @@ import TableCell from "@mui/material/TableCell";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Chip from "@mui/material/Chip";
+import Select from "@mui/material/Select";
+import MenuItem from "@mui/material/MenuItem";
+import FormControl from "@mui/material/FormControl";
+import InputLabel from "@mui/material/InputLabel";
 import DeleteRoundedIcon from "@mui/icons-material/DeleteRounded";
 import EditRoundedIcon from "@mui/icons-material/EditRounded";
 import BlockIcon from "@mui/icons-material/Block";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import BusinessIcon from "@mui/icons-material/Business";
 import CircularProgress from "@mui/material/CircularProgress";
 import ConfirmDeleteDialog from "@/components/cards/ConfirmDeleteDialog";
 
@@ -28,7 +33,12 @@ type Item = {
   location: string;
   rooms?: number;
   propertyType?: "depto" | "casa" | "lote" | "local";
-  agency?: { logo?: string; plan?: "premium" | "sponsor" | "pro" | "free" };
+  agency?: { 
+    _id?: string;
+    name?: string;
+    logo?: string; 
+    plan?: "premium" | "pro" | "free";
+  };
   status?: "active" | "suspended";
   createdAt?: string;
 };
@@ -38,6 +48,8 @@ export default function AdminListingsPage() {
   const [items, setItems] = useState<Item[]>([]);
   const [q, setQ] = useState("");
   const [delId, setDelId] = useState<string | null>(null);
+  const [filterStatus, setFilterStatus] = useState<"all" | "active" | "suspended">("all");
+  const [filterPlan, setFilterPlan] = useState<"all" | "free" | "pro" | "premium">("all");
 
   async function load() {
     setLoading(true);
@@ -53,12 +65,26 @@ export default function AdminListingsPage() {
 
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase();
-    if (!s) return items;
-    return items.filter(it =>
-      it.title?.toLowerCase().includes(s) ||
-      it.location?.toLowerCase().includes(s)
-    );
-  }, [items, q]);
+    
+    return items.filter(it => {
+      // Filtro de búsqueda
+      const matchSearch = !s || 
+        it.title?.toLowerCase().includes(s) ||
+        it.location?.toLowerCase().includes(s) ||
+        it.agency?.name?.toLowerCase().includes(s);
+      
+      // Filtro de estado
+      const matchStatus = filterStatus === "all" || 
+        (filterStatus === "active" && (it.status === "active" || !it.status)) ||
+        (filterStatus === "suspended" && it.status === "suspended");
+      
+      // Filtro de plan
+      const plan = it.agency?.plan || "free";
+      const matchPlan = filterPlan === "all" || plan === filterPlan;
+      
+      return matchSearch && matchStatus && matchPlan;
+    });
+  }, [items, q, filterStatus, filterPlan]);
 
   async function doDelete(id: string) {
     const res = await fetch(`/api/listings/${id}`, { method: "DELETE" });
@@ -87,12 +113,64 @@ export default function AdminListingsPage() {
 
   return (
     <Box sx={{ display: "grid", gap: 2 }}>
+      {/* Header */}
       <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
         <Typography variant="h5" fontWeight={800}>Inmuebles</Typography>
         <Box sx={{ ml: "auto", display: "flex", gap: 1 }}>
-          <TextField size="small" placeholder="Buscar…" value={q} onChange={e => setQ(e.target.value)} />
           <Link href="/panel/listings/new"><Button variant="contained">Nuevo</Button></Link>
         </Box>
+      </Box>
+
+      {/* Estadísticas */}
+      <Box sx={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 2 }}>
+        <Box sx={{ p: 2, border: "1px solid rgba(255,255,255,.08)", borderRadius: 1 }}>
+          <Typography variant="body2" color="text.secondary">Total Propiedades</Typography>
+          <Typography variant="h4" fontWeight={700}>{items.length}</Typography>
+        </Box>
+        <Box sx={{ p: 2, border: "1px solid rgba(255,255,255,.08)", borderRadius: 1 }}>
+          <Typography variant="body2" color="text.secondary">Activas</Typography>
+          <Typography variant="h4" fontWeight={700} color="success.main">
+            {items.filter(i => i.status === "active" || !i.status).length}
+          </Typography>
+        </Box>
+        <Box sx={{ p: 2, border: "1px solid rgba(255,255,255,.08)", borderRadius: 1 }}>
+          <Typography variant="body2" color="text.secondary">Suspendidas</Typography>
+          <Typography variant="h4" fontWeight={700} color="error.main">
+            {items.filter(i => i.status === "suspended").length}
+          </Typography>
+        </Box>
+        <Box sx={{ p: 2, border: "1px solid rgba(255,255,255,.08)", borderRadius: 1 }}>
+          <Typography variant="body2" color="text.secondary">Mostrando</Typography>
+          <Typography variant="h4" fontWeight={700}>{filtered.length}</Typography>
+        </Box>
+      </Box>
+
+      {/* Filtros */}
+      <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
+        <TextField 
+          size="small" 
+          placeholder="Buscar por título, ubicación o inmobiliaria..." 
+          value={q} 
+          onChange={e => setQ(e.target.value)}
+          sx={{ minWidth: 300 }}
+        />
+        <FormControl size="small" sx={{ minWidth: 150 }}>
+          <InputLabel>Estado</InputLabel>
+          <Select value={filterStatus} label="Estado" onChange={e => setFilterStatus(e.target.value as any)}>
+            <MenuItem value="all">Todos</MenuItem>
+            <MenuItem value="active">Activos</MenuItem>
+            <MenuItem value="suspended">Suspendidos</MenuItem>
+          </Select>
+        </FormControl>
+        <FormControl size="small" sx={{ minWidth: 150 }}>
+          <InputLabel>Plan</InputLabel>
+          <Select value={filterPlan} label="Plan" onChange={e => setFilterPlan(e.target.value as any)}>
+            <MenuItem value="all">Todos</MenuItem>
+            <MenuItem value="free">FREE</MenuItem>
+            <MenuItem value="pro">PRO</MenuItem>
+            <MenuItem value="premium">PREMIUM</MenuItem>
+          </Select>
+        </FormControl>
       </Box>
 
       {loading ? (
@@ -101,11 +179,11 @@ export default function AdminListingsPage() {
         <Table size="small" sx={{ border: "1px solid rgba(255,255,255,.08)", borderRadius: 1 }}>
           <TableHead>
             <TableRow>
+              <TableCell>Inmobiliaria</TableCell>
               <TableCell>Título</TableCell>
               <TableCell>Ubicación</TableCell>
               <TableCell>Precio</TableCell>
               <TableCell>Plan</TableCell>
-              <TableCell>Tipo</TableCell>
               <TableCell>Estado</TableCell>
               <TableCell align="right">Acciones</TableCell>
             </TableRow>
@@ -113,6 +191,16 @@ export default function AdminListingsPage() {
           <TableBody>
             {filtered.map(it => (
               <TableRow key={it._id} hover>
+                <TableCell>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                    {it.agency?.logo ? (
+                      <img src={it.agency.logo} alt="logo" style={{ width: 24, height: 24, objectFit: "contain" }} />
+                    ) : (
+                      <BusinessIcon sx={{ fontSize: 24, color: "text.secondary" }} />
+                    )}
+                    <Typography variant="body2">{it.agency?.name || "Sin inmobiliaria"}</Typography>
+                  </Box>
+                </TableCell>
                 <TableCell>{it.title}</TableCell>
                 <TableCell>{it.location}</TableCell>
                 <TableCell>{it.currency} {Intl.NumberFormat("es-AR").format(it.price || 0)}</TableCell>
@@ -120,10 +208,14 @@ export default function AdminListingsPage() {
                   <Chip
                     size="small"
                     label={(it.agency?.plan || "free").toUpperCase()}
-                    color={it.agency?.plan === "premium" ? "warning" : it.agency?.plan === "sponsor" ? "info" : "default"}
+                    sx={{
+                      fontWeight: 700,
+                      background: it.agency?.plan === "premium" ? "#D9A441" : 
+                                 it.agency?.plan === "pro" ? "#2A6EBB" : "#4CAF50",
+                      color: "#fff"
+                    }}
                   />
                 </TableCell>
-                <TableCell>{it.propertyType || "-"}</TableCell>
                 <TableCell>
                   <Chip
                     size="small"

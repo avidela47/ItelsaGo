@@ -38,6 +38,7 @@ export default function PublicarPage() {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [okMsg, setOkMsg] = useState<string | null>(null);
+  const [agencyName, setAgencyName] = useState<string>(""); // Nombre de la inmobiliaria
 
   const [title, setTitle] = useState("");
   const [location, setLocation] = useState("");
@@ -55,6 +56,13 @@ export default function PublicarPage() {
     setLoading(false);
     if (r !== "admin" && r !== "agency") {
       router.replace("/login?from=publicar");
+    }
+    
+    // Si es agency, obtener el nombre de la inmobiliaria
+    if (r === "agency") {
+      const name = window.localStorage.getItem("name") || 
+                   document.cookie.match(/(?:^|;)\s*name=([^;]+)/)?.[1] || "";
+      setAgencyName(decodeURIComponent(name));
     }
   }, [router]);
 
@@ -105,9 +113,10 @@ export default function PublicarPage() {
             body: JSON.stringify({
               listingTitle: title,
               listingId: data.id,
-              agencyName: "Inmobiliaria", // Por ahora genérico
+              agencyName: agencyName || "Inmobiliaria sin nombre",
             }),
           });
+          console.log("✅ Admin notificado sobre nueva propiedad");
         } catch (e) {
           console.error("Error notificando al admin:", e);
           // No fallar si el email falla
