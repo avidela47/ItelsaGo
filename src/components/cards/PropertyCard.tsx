@@ -17,6 +17,12 @@ type Item = {
   images: string[];
   rooms?: number;
   propertyType?: string;
+  operationType?: string;
+  m2Total?: number;
+  m2Cubiertos?: number;
+  bathrooms?: number;
+  bedrooms?: number;
+  garage?: boolean;
   agency?: { logo?: string; plan?: Plan; whatsapp?: string };
   createdAt?: string;
 };
