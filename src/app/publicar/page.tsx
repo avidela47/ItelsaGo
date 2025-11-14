@@ -348,7 +348,72 @@ export default function PublicarPage() {
           multiline
           minRows={4}
           sx={{ gridColumn: "1 / -1" }}
+          helperText="Pegá las URLs de las imágenes, una por línea. Se mostrarán abajo."
         />
+
+        {/* Previsualización de imágenes */}
+        {images.trim() && (
+          <Box sx={{ gridColumn: "1 / -1" }}>
+            <Typography variant="body2" sx={{ mb: 1, color: "text.secondary", fontWeight: 600 }}>
+              Vista previa de imágenes:
+            </Typography>
+            <Box sx={{ 
+              display: "grid", 
+              gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", 
+              gap: 1 
+            }}>
+              {images.split("\n").filter(url => url.trim()).map((url, idx) => (
+                <Box
+                  key={idx}
+                  sx={{
+                    position: "relative",
+                    aspectRatio: "16/10",
+                    borderRadius: 1,
+                    overflow: "hidden",
+                    border: "1px solid rgba(255,255,255,.12)",
+                    bgcolor: "rgba(255,255,255,.03)",
+                  }}
+                >
+                  <img
+                    src={url.trim()}
+                    alt={`Preview ${idx + 1}`}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                    }}
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = "none";
+                      const parent = (e.target as HTMLElement).parentElement;
+                      if (parent) {
+                        parent.style.display = "flex";
+                        parent.style.alignItems = "center";
+                        parent.style.justifyContent = "center";
+                        parent.innerHTML = '<span style="color: #f44336; font-size: 12px;">❌ Error</span>';
+                      }
+                    }}
+                  />
+                  <Box
+                    sx={{
+                      position: "absolute",
+                      top: 4,
+                      right: 4,
+                      bgcolor: "rgba(0,0,0,.7)",
+                      color: "#fff",
+                      px: 0.8,
+                      py: 0.3,
+                      borderRadius: 0.5,
+                      fontSize: 11,
+                      fontWeight: 700,
+                    }}
+                  >
+                    {idx + 1}
+                  </Box>
+                </Box>
+              ))}
+            </Box>
+          </Box>
+        )}
 
         <TextField
           label="Descripción"
