@@ -95,6 +95,36 @@ export async function POST(req: NextRequest) {
       if (agencyId) {
         finalAgency = agencyId;
         console.log("✅ Inmueble vinculado a agency:", agencyId);
+        
+        // Verificar límites según el plan
+        const agencyDoc = await Agency.findById(agencyId).lean();
+        if (agencyDoc) {
+          const plan = (agencyDoc as any).plan || "free";
+          const existingCount = await Listing.countDocuments({ 
+            agency: agencyId,
+            status: { $ne: "suspended" } // Solo contar activos
+          });
+          
+          // Límites por plan
+          const limits: Record<string, number> = {
+            free: 3,
+            pro: 10,
+            premium: 999999, // Ilimitado
+          };
+          
+          const limit = limits[plan] || 3;
+          
+          if (existingCount >= limit) {
+            return NextResponse.json(
+              { 
+                error: `Límite alcanzado. Plan ${plan.toUpperCase()}: máximo ${limit === 999999 ? 'ilimitadas' : limit} propiedades. Contactá al administrador para cambiar tu plan.` 
+              },
+              { status: 403 }
+            );
+          }
+          
+          console.log(`✅ Límite OK: ${existingCount + 1}/${limit} (${plan.toUpperCase()})`);
+        }
       } else {
         return NextResponse.json(
           { error: "No se encontró tu inmobiliaria. Contactá al administrador." },
