@@ -45,12 +45,12 @@ export async function POST(req: NextRequest) {
     const role = user.role || "user";
 
     // Si es agency, buscar su inmobiliaria por email
-    let agencyId = null;
+    let agencyId: string | null = null;
     if (role === "agency") {
       const agency = await Agency.findOne({ email: user.email }).lean();
       if (agency) {
-        agencyId = String(agency._id);
-        console.log("✅ Agency vinculada al login:", agency.name);
+        agencyId = String((agency as any)._id);
+        console.log("✅ Agency vinculada al login:", (agency as any).name);
       }
     }
 
