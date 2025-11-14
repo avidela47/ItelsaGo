@@ -47,6 +47,11 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
               Inmuebles
             </Button>
           </Link>
+          <Link href="/panel/agencies">
+            <Button fullWidth variant={pathname?.startsWith("/panel/agencies") ? "contained" : "outlined"}>
+              Inmobiliarias
+            </Button>
+          </Link>
         </nav>
       </Box>
 

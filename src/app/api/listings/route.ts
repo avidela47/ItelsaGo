@@ -2,11 +2,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { dbConnect } from "@/lib/mongo";
 import Listing from "@/models/Listing";
+import Agency from "@/models/Agency"; // ✅ Importar Agency para que Mongoose lo registre
 import { isAdminFromRequest } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
   try {
     await dbConnect();
+    
+    // Asegurarse de que el modelo Agency esté registrado
+    if (Agency) {
+      console.log("✅ Agency model loaded");
+    }
     const { searchParams } = new URL(req.url);
     const location = searchParams.get("location");
     const showAll = searchParams.get("showAll"); // Para admin panel
@@ -23,11 +29,20 @@ export async function GET(req: NextRequest) {
       ];
     }
 
-    const items = await Listing.find(query).sort({ createdAt: -1 }).lean();
+    console.log("🔍 Buscando listings...");
+    
+    // Traer items CON populate
+    const items = await Listing.find(query)
+      .sort({ createdAt: -1 })
+      .populate("agency")
+      .lean();
+
+    console.log("✅ Items encontrados:", items.length);
 
     return NextResponse.json({ ok: true, items });
   } catch (err: any) {
-    console.error("GET /api/listings error:", err);
+    console.error("❌ GET /api/listings error:", err);
+    console.error("Stack:", err.stack);
     return NextResponse.json(
       { error: err?.message || "Error interno" },
       { status: 500 }
@@ -36,12 +51,20 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  if (!isAdminFromRequest(req)) {
-    return NextResponse.json({ error: "Solo admin" }, { status: 401 });
-  }
-
   try {
     await dbConnect();
+    
+    // Verificar rol (admin o agency)
+    const isAdmin = isAdminFromRequest(req);
+    const role = req.cookies.get("role")?.value;
+    
+    if (!isAdmin && role !== "agency") {
+      return NextResponse.json(
+        { error: "Solo admin o inmobiliarias pueden publicar" },
+        { status: 401 }
+      );
+    }
+
     const body = await req.json();
 
     const {
@@ -63,6 +86,21 @@ export async function POST(req: NextRequest) {
         { error: "Faltan campos obligatorios" },
         { status: 400 }
       );
+    }
+
+    // Si es agency, obtener su agencyId automáticamente
+    let finalAgency = agency;
+    if (role === "agency" && !isAdmin) {
+      const agencyId = req.cookies.get("agencyId")?.value;
+      if (agencyId) {
+        finalAgency = agencyId;
+        console.log("✅ Inmueble vinculado a agency:", agencyId);
+      } else {
+        return NextResponse.json(
+          { error: "No se encontró tu inmobiliaria. Contactá al administrador." },
+          { status: 400 }
+        );
+      }
     }
 
     // Idempotencia opcional
@@ -93,7 +131,7 @@ export async function POST(req: NextRequest) {
             .map((x: string) => x.trim())
             .filter(Boolean),
       description,
-      agency,
+      agency: finalAgency,
     });
 
     return NextResponse.json({ ok: true, id: String(doc._id) });

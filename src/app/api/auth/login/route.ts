@@ -2,6 +2,7 @@ import { NextResponse, NextRequest } from "next/server";
 import { dbConnect } from "@/lib/mongo";
 import bcrypt from "bcryptjs";
 import User from "@/models/User";
+import Agency from "@/models/Agency";
 
 /**
  * POST /api/auth/login
@@ -43,6 +44,16 @@ export async function POST(req: NextRequest) {
 
     const role = user.role || "user";
 
+    // Si es agency, buscar su inmobiliaria por email
+    let agencyId = null;
+    if (role === "agency") {
+      const agency = await Agency.findOne({ email: user.email }).lean();
+      if (agency) {
+        agencyId = String(agency._id);
+        console.log("✅ Agency vinculada al login:", agency.name);
+      }
+    }
+
     const res = NextResponse.json({
       ok: true,
       role,
@@ -57,6 +68,11 @@ export async function POST(req: NextRequest) {
       sameSite: "lax",
       path: "/",
     });
+    
+    // Guardar agencyId si existe
+    if (agencyId) {
+      res.cookies.set("agencyId", agencyId, { httpOnly: true, sameSite: "lax", path: "/" });
+    }
 
     return res;
   } catch (err: any) {

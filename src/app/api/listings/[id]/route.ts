@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { dbConnect } from "@/lib/mongo";
 import Listing from "@/models/Listing";
+import Agency from "@/models/Agency"; // ✅ Importar Agency para que Mongoose lo registre
 import { isAdminFromRequest } from "@/lib/auth";
 
 type Params = { params: { id: string } };
@@ -8,10 +9,15 @@ type Params = { params: { id: string } };
 export async function GET(req: NextRequest, { params }: Params) {
   try {
     await dbConnect();
-    const item = await Listing.findById(params.id).lean();
+    
+    const item = await Listing.findById(params.id)
+      .populate("agency")
+      .lean();
+      
     if (!item) {
       return NextResponse.json({ error: "No encontrado" }, { status: 404 });
     }
+
     return NextResponse.json({ ok: true, item });
   } catch (err: any) {
     console.error("GET /api/listings/[id] error:", err);

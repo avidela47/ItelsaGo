@@ -96,6 +96,24 @@ export default function PublicarPage() {
         throw new Error(data?.error || "No se pudo publicar");
       }
 
+      // Si es agency, notificar al admin
+      if (role === "agency") {
+        try {
+          await fetch("/api/notify-admin", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              listingTitle: title,
+              listingId: data.id,
+              agencyName: "Inmobiliaria", // Por ahora genérico
+            }),
+          });
+        } catch (e) {
+          console.error("Error notificando al admin:", e);
+          // No fallar si el email falla
+        }
+      }
+
       setOkMsg("Inmueble publicado correctamente.");
       // Limpio un poco
       setTitle("");

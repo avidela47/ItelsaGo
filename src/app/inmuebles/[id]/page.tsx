@@ -9,11 +9,17 @@ import Button from "@mui/material/Button";
 import CircularProgress from "@mui/material/CircularProgress";
 import Divider from "@mui/material/Divider";
 import Alert from "@mui/material/Alert";
+import TextField from "@mui/material/TextField";
+import Dialog from "@mui/material/Dialog";
+import DialogTitle from "@mui/material/DialogTitle";
+import DialogContent from "@mui/material/DialogContent";
+import DialogActions from "@mui/material/DialogActions";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import WhatsAppIcon from "@mui/icons-material/WhatsApp";
 import PhoneIcon from "@mui/icons-material/Phone";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
+import EmailIcon from "@mui/icons-material/Email";
 import PropertyCard from "@/components/cards/PropertyCard";
 
 type Plan = "premium" | "pro" | "sponsor" | "free";
@@ -55,6 +61,13 @@ export default function InmueblePage() {
   const [idx, setIdx] = useState(0);
   const [similar, setSimilar] = useState<Item[]>([]);
   const [simErr, setSimErr] = useState<string | null>(null);
+
+  // Estado del formulario de contacto
+  const [openContact, setOpenContact] = useState(false);
+  const [contactForm, setContactForm] = useState({ name: "", email: "", phone: "", message: "" });
+  const [sendingContact, setSendingContact] = useState(false);
+  const [contactSuccess, setContactSuccess] = useState(false);
+  const [contactError, setContactError] = useState<string | null>(null);
 
   // Leer rol del localStorage
   useEffect(() => {
@@ -190,6 +203,49 @@ export default function InmueblePage() {
   function telLink() {
     const number = (item?.agency?.phone || "").replace(/[^\d+]/g, "");
     return number ? `tel:${number}` : undefined;
+  }
+
+  // Función para enviar consulta
+  async function handleSendContact() {
+    const { name, email, message } = contactForm;
+    if (!name || !email || !message) {
+      setContactError("Por favor completá todos los campos obligatorios");
+      return;
+    }
+
+    setSendingContact(true);
+    setContactError(null);
+
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          listingId: item?._id,
+          name,
+          email,
+          phone: contactForm.phone,
+          message,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Error al enviar consulta");
+      }
+
+      setContactSuccess(true);
+      setTimeout(() => {
+        setOpenContact(false);
+        setContactSuccess(false);
+        setContactForm({ name: "", email: "", phone: "", message: "" });
+      }, 2000);
+    } catch (error: any) {
+      setContactError(error.message || "Error al enviar la consulta");
+    } finally {
+      setSendingContact(false);
+    }
   }
 
   // Función eliminar (solo admin)
@@ -479,6 +535,17 @@ export default function InmueblePage() {
               </Button>
             </Box>
 
+            {/* Botón de consulta por email */}
+            <Button
+              fullWidth
+              variant="outlined"
+              startIcon={<EmailIcon />}
+              onClick={() => setOpenContact(true)}
+              sx={{ mt: 1.2 }}
+            >
+              Consultar por Email
+            </Button>
+
             {/* Botones de admin */}
             {role === "admin" && (
               <Box sx={{ display: "flex", gap: 1.2, mt: 1.5 }}>
@@ -586,6 +653,80 @@ export default function InmueblePage() {
           </Box>
         )}
       </Box>
+
+      {/* Dialog de formulario de contacto */}
+      <Dialog open={openContact} onClose={() => setOpenContact(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Consultar por esta propiedad</DialogTitle>
+        <DialogContent>
+          {contactSuccess ? (
+            <Alert severity="success" sx={{ mt: 2 }}>
+              ¡Consulta enviada exitosamente! La inmobiliaria te contactará pronto.
+            </Alert>
+          ) : (
+            <>
+              <Typography sx={{ mb: 2, opacity: 0.8 }}>
+                Enviá tu consulta y la inmobiliaria te responderá a la brevedad.
+              </Typography>
+
+              {contactError && (
+                <Alert severity="error" sx={{ mb: 2 }}>
+                  {contactError}
+                </Alert>
+              )}
+
+              <TextField
+                label="Nombre completo *"
+                fullWidth
+                value={contactForm.name}
+                onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })}
+                sx={{ mb: 2 }}
+              />
+
+              <TextField
+                label="Email *"
+                type="email"
+                fullWidth
+                value={contactForm.email}
+                onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
+                sx={{ mb: 2 }}
+              />
+
+              <TextField
+                label="Teléfono (opcional)"
+                fullWidth
+                value={contactForm.phone}
+                onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value })}
+                sx={{ mb: 2 }}
+              />
+
+              <TextField
+                label="Mensaje *"
+                multiline
+                rows={4}
+                fullWidth
+                value={contactForm.message}
+                onChange={(e) => setContactForm({ ...contactForm, message: e.target.value })}
+                placeholder="Ej: Me interesa esta propiedad. ¿Está disponible para visitar?"
+              />
+            </>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenContact(false)} disabled={sendingContact}>
+            Cancelar
+          </Button>
+          {!contactSuccess && (
+            <Button
+              variant="contained"
+              onClick={handleSendContact}
+              disabled={sendingContact}
+              startIcon={sendingContact ? <CircularProgress size={16} /> : <EmailIcon />}
+            >
+              {sendingContact ? "Enviando..." : "Enviar Consulta"}
+            </Button>
+          )}
+        </DialogActions>
+      </Dialog>
     </main>
   );
 }
