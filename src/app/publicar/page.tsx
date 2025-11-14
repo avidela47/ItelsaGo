@@ -13,6 +13,12 @@ import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
 import Chip from "@mui/material/Chip";
 import LinearProgress from "@mui/material/LinearProgress";
+import Snackbar from "@mui/material/Snackbar";
+import Dialog from "@mui/material/Dialog";
+import DialogTitle from "@mui/material/DialogTitle";
+import DialogContent from "@mui/material/DialogContent";
+import DialogActions from "@mui/material/DialogActions";
+import PropertyCard from "@/components/cards/PropertyCard";
 
 type Role = "guest" | "user" | "agency" | "admin";
 type Plan = "free" | "pro" | "premium";
@@ -40,8 +46,11 @@ export default function PublicarPage() {
   const [role, setRole] = useState<Role>("guest");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [okMsg, setOkMsg] = useState<string | null>(null);
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: "success" | "error" }>({
+    open: false,
+    message: "",
+    severity: "success",
+  });
   const [agencyName, setAgencyName] = useState<string>(""); // Nombre de la inmobiliaria
   
   // Info del plan y límites
@@ -58,6 +67,7 @@ export default function PublicarPage() {
   const [description, setDescription] = useState("");
   const [images, setImages] = useState<string>("");
   const [plan, setPlan] = useState<Plan>("free"); // por defecto free
+  const [openPreview, setOpenPreview] = useState(false);
 
   useEffect(() => {
     const r = getRoleFromCookie();
@@ -94,8 +104,6 @@ export default function PublicarPage() {
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    setError(null);
-    setOkMsg(null);
 
     try {
       setSending(true);
@@ -149,8 +157,14 @@ export default function PublicarPage() {
         }
       }
 
-      setOkMsg("Inmueble publicado correctamente.");
-      // Limpio un poco
+      setSnackbar({ open: true, message: "✅ Inmueble publicado correctamente", severity: "success" });
+      
+      // Refrescar info del plan si es agency
+      if (role === "agency") {
+        fetchAgencyInfo();
+      }
+      
+      // Limpio formulario
       setTitle("");
       setLocation("");
       setPrice("");
@@ -159,7 +173,7 @@ export default function PublicarPage() {
       setImages("");
       if (role === "admin") setPlan("free");
     } catch (err: any) {
-      setError(err?.message || "Error al publicar");
+      setSnackbar({ open: true, message: err?.message || "Error al publicar", severity: "error" });
     } finally {
       setSending(false);
     }
@@ -248,17 +262,6 @@ export default function PublicarPage() {
             </Typography>
           </CardContent>
         </Card>
-      )}
-
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {error}
-        </Alert>
-      )}
-      {okMsg && (
-        <Alert severity="success" sx={{ mb: 2 }}>
-          {okMsg}
-        </Alert>
       )}
 
       <Box
@@ -425,7 +428,14 @@ export default function PublicarPage() {
           sx={{ gridColumn: "1 / -1" }}
         />
 
-        <Box sx={{ gridColumn: "1 / -1", mt: 1, textAlign: "right" }}>
+        <Box sx={{ gridColumn: "1 / -1", mt: 1, display: "flex", gap: 2, justifyContent: "flex-end" }}>
+          <Button
+            variant="outlined"
+            onClick={() => setOpenPreview(true)}
+            disabled={!title || !location || !price}
+          >
+            👁️ Vista Previa
+          </Button>
           <Button
             type="submit"
             variant="contained"
@@ -435,6 +445,63 @@ export default function PublicarPage() {
           </Button>
         </Box>
       </Box>
+
+      {/* Dialog de Vista Previa */}
+      <Dialog 
+        open={openPreview} 
+        onClose={() => setOpenPreview(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Vista Previa del Inmueble</DialogTitle>
+        <DialogContent>
+          <PropertyCard
+            item={{
+              _id: "preview",
+              title: title || "Título del inmueble",
+              price: Number(price) || 0,
+              currency: currency,
+              location: location || "Ubicación",
+              images: images ? images.split("\n").filter(Boolean) : [],
+              rooms: Number(rooms) || undefined,
+              propertyType: propertyType,
+              agency: role === "agency" 
+                ? { 
+                    plan: agencyPlan, 
+                    logo: undefined, 
+                    whatsapp: undefined 
+                  } 
+                : { 
+                    plan: plan, 
+                    logo: undefined, 
+                    whatsapp: undefined 
+                  },
+            }}
+          />
+          <Typography variant="caption" sx={{ display: "block", mt: 2, color: "text.secondary" }}>
+            ℹ️ Esta es una vista previa. El inmueble se verá así una vez publicado.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenPreview(false)}>Cerrar</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Snackbar para notificaciones */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert 
+          onClose={() => setSnackbar({ ...snackbar, open: false })} 
+          severity={snackbar.severity}
+          sx={{ width: "100%" }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </main>
   );
 }
