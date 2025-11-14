@@ -9,6 +9,16 @@ import MenuItem from "@mui/material/MenuItem";
 import Typography from "@mui/material/Typography";
 import Alert from "@mui/material/Alert";
 import CircularProgress from "@mui/material/CircularProgress";
+import Card from "@mui/material/Card";
+import CardContent from "@mui/material/CardContent";
+import Chip from "@mui/material/Chip";
+import LinearProgress from "@mui/material/LinearProgress";
+import Snackbar from "@mui/material/Snackbar";
+import Dialog from "@mui/material/Dialog";
+import DialogTitle from "@mui/material/DialogTitle";
+import DialogContent from "@mui/material/DialogContent";
+import DialogActions from "@mui/material/DialogActions";
+import PropertyCard from "@/components/cards/PropertyCard";
 
 type Role = "guest" | "user" | "agency" | "admin";
 type Plan = "free" | "pro" | "premium";
@@ -36,8 +46,17 @@ export default function PublicarPage() {
   const [role, setRole] = useState<Role>("guest");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [okMsg, setOkMsg] = useState<string | null>(null);
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: "success" | "error" }>({
+    open: false,
+    message: "",
+    severity: "success",
+  });
+  const [agencyName, setAgencyName] = useState<string>(""); // Nombre de la inmobiliaria
+  
+  // Info del plan y límites
+  const [agencyPlan, setAgencyPlan] = useState<Plan>("free");
+  const [propertiesCount, setPropertiesCount] = useState<number>(0);
+  const [propertiesLimit, setPropertiesLimit] = useState<number>(3);
 
   const [title, setTitle] = useState("");
   const [location, setLocation] = useState("");
@@ -48,6 +67,7 @@ export default function PublicarPage() {
   const [description, setDescription] = useState("");
   const [images, setImages] = useState<string>("");
   const [plan, setPlan] = useState<Plan>("free"); // por defecto free
+  const [openPreview, setOpenPreview] = useState(false);
 
   useEffect(() => {
     const r = getRoleFromCookie();
@@ -56,12 +76,34 @@ export default function PublicarPage() {
     if (r !== "admin" && r !== "agency") {
       router.replace("/login?from=publicar");
     }
+    
+    // Si es agency, obtener el nombre de la inmobiliaria y el plan
+    if (r === "agency") {
+      const name = window.localStorage.getItem("name") || 
+                   document.cookie.match(/(?:^|;)\s*name=([^;]+)/)?.[1] || "";
+      setAgencyName(decodeURIComponent(name));
+      
+      // Obtener info del plan y propiedades
+      fetchAgencyInfo();
+    }
   }, [router]);
+
+  async function fetchAgencyInfo() {
+    try {
+      const res = await fetch("/api/user/agency-info");
+      if (res.ok) {
+        const data = await res.json();
+        setAgencyPlan(data.plan || "free");
+        setPropertiesCount(data.propertiesCount || 0);
+        setPropertiesLimit(data.limit || 3);
+      }
+    } catch (e) {
+      console.error("Error obteniendo info de agency:", e);
+    }
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    setError(null);
-    setOkMsg(null);
 
     try {
       setSending(true);
@@ -105,17 +147,24 @@ export default function PublicarPage() {
             body: JSON.stringify({
               listingTitle: title,
               listingId: data.id,
-              agencyName: "Inmobiliaria", // Por ahora genérico
+              agencyName: agencyName || "Inmobiliaria sin nombre",
             }),
           });
+          console.log("✅ Admin notificado sobre nueva propiedad");
         } catch (e) {
           console.error("Error notificando al admin:", e);
           // No fallar si el email falla
         }
       }
 
-      setOkMsg("Inmueble publicado correctamente.");
-      // Limpio un poco
+      setSnackbar({ open: true, message: "✅ Inmueble publicado correctamente", severity: "success" });
+      
+      // Refrescar info del plan si es agency
+      if (role === "agency") {
+        fetchAgencyInfo();
+      }
+      
+      // Limpio formulario
       setTitle("");
       setLocation("");
       setPrice("");
@@ -124,7 +173,7 @@ export default function PublicarPage() {
       setImages("");
       if (role === "admin") setPlan("free");
     } catch (err: any) {
-      setError(err?.message || "Error al publicar");
+      setSnackbar({ open: true, message: err?.message || "Error al publicar", severity: "error" });
     } finally {
       setSending(false);
     }
@@ -151,21 +200,68 @@ export default function PublicarPage() {
     );
   }
 
+  const getPlanColor = (plan: string) => {
+    if (plan === "premium") return "#D9A441";
+    if (plan === "pro") return "#2A6EBB";
+    return "#4CAF50";
+  };
+
+  const remaining = propertiesLimit - propertiesCount;
+  const percentageUsed = (propertiesCount / propertiesLimit) * 100;
+
   return (
     <main style={{ padding: "24px 16px", maxWidth: 900, margin: "0 auto" }}>
       <Typography variant="h4" fontWeight={800} sx={{ mb: 2 }}>
         Publicar inmueble
       </Typography>
 
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {error}
-        </Alert>
-      )}
-      {okMsg && (
-        <Alert severity="success" sx={{ mb: 2 }}>
-          {okMsg}
-        </Alert>
+      {/* Indicador de plan (solo para agencies) */}
+      {role === "agency" && (
+        <Card sx={{ mb: 3, bgcolor: "rgba(255,255,255,.03)", border: "1px solid rgba(255,255,255,.08)" }}>
+          <CardContent>
+            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 2 }}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                <Typography variant="h6" fontWeight={700}>Tu Plan</Typography>
+                <Chip
+                  label={agencyPlan.toUpperCase()}
+                  sx={{
+                    bgcolor: getPlanColor(agencyPlan),
+                    color: "#fff",
+                    fontWeight: 700,
+                  }}
+                />
+              </Box>
+              <Typography variant="h6" fontWeight={700}>
+                {propertiesCount} / {propertiesLimit === 999999 ? "∞" : propertiesLimit}
+              </Typography>
+            </Box>
+            
+            <LinearProgress 
+              variant="determinate" 
+              value={Math.min(percentageUsed, 100)}
+              sx={{
+                height: 8,
+                borderRadius: 4,
+                bgcolor: "rgba(255,255,255,.1)",
+                "& .MuiLinearProgress-bar": {
+                  bgcolor: getPlanColor(agencyPlan),
+                },
+              }}
+            />
+            
+            <Typography variant="body2" sx={{ mt: 1, color: "text.secondary" }}>
+              {remaining > 0 ? (
+                <>
+                  Te {remaining === 1 ? "queda" : "quedan"} <strong>{remaining}</strong> {remaining === 1 ? "propiedad" : "propiedades"} disponible{remaining === 1 ? "" : "s"}
+                </>
+              ) : propertiesLimit === 999999 ? (
+                <>Propiedades ilimitadas</>
+              ) : (
+                <>⚠️ Alcanzaste el límite de tu plan. Contactá al administrador para subir de plan.</>
+              )}
+            </Typography>
+          </CardContent>
+        </Card>
       )}
 
       <Box
@@ -255,7 +351,72 @@ export default function PublicarPage() {
           multiline
           minRows={4}
           sx={{ gridColumn: "1 / -1" }}
+          helperText="Pegá las URLs de las imágenes, una por línea. Se mostrarán abajo."
         />
+
+        {/* Previsualización de imágenes */}
+        {images.trim() && (
+          <Box sx={{ gridColumn: "1 / -1" }}>
+            <Typography variant="body2" sx={{ mb: 1, color: "text.secondary", fontWeight: 600 }}>
+              Vista previa de imágenes:
+            </Typography>
+            <Box sx={{ 
+              display: "grid", 
+              gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", 
+              gap: 1 
+            }}>
+              {images.split("\n").filter(url => url.trim()).map((url, idx) => (
+                <Box
+                  key={idx}
+                  sx={{
+                    position: "relative",
+                    aspectRatio: "16/10",
+                    borderRadius: 1,
+                    overflow: "hidden",
+                    border: "1px solid rgba(255,255,255,.12)",
+                    bgcolor: "rgba(255,255,255,.03)",
+                  }}
+                >
+                  <img
+                    src={url.trim()}
+                    alt={`Preview ${idx + 1}`}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                    }}
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = "none";
+                      const parent = (e.target as HTMLElement).parentElement;
+                      if (parent) {
+                        parent.style.display = "flex";
+                        parent.style.alignItems = "center";
+                        parent.style.justifyContent = "center";
+                        parent.innerHTML = '<span style="color: #f44336; font-size: 12px;">❌ Error</span>';
+                      }
+                    }}
+                  />
+                  <Box
+                    sx={{
+                      position: "absolute",
+                      top: 4,
+                      right: 4,
+                      bgcolor: "rgba(0,0,0,.7)",
+                      color: "#fff",
+                      px: 0.8,
+                      py: 0.3,
+                      borderRadius: 0.5,
+                      fontSize: 11,
+                      fontWeight: 700,
+                    }}
+                  >
+                    {idx + 1}
+                  </Box>
+                </Box>
+              ))}
+            </Box>
+          </Box>
+        )}
 
         <TextField
           label="Descripción"
@@ -267,7 +428,14 @@ export default function PublicarPage() {
           sx={{ gridColumn: "1 / -1" }}
         />
 
-        <Box sx={{ gridColumn: "1 / -1", mt: 1, textAlign: "right" }}>
+        <Box sx={{ gridColumn: "1 / -1", mt: 1, display: "flex", gap: 2, justifyContent: "flex-end" }}>
+          <Button
+            variant="outlined"
+            onClick={() => setOpenPreview(true)}
+            disabled={!title || !location || !price}
+          >
+            👁️ Vista Previa
+          </Button>
           <Button
             type="submit"
             variant="contained"
@@ -277,6 +445,63 @@ export default function PublicarPage() {
           </Button>
         </Box>
       </Box>
+
+      {/* Dialog de Vista Previa */}
+      <Dialog 
+        open={openPreview} 
+        onClose={() => setOpenPreview(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Vista Previa del Inmueble</DialogTitle>
+        <DialogContent>
+          <PropertyCard
+            item={{
+              _id: "preview",
+              title: title || "Título del inmueble",
+              price: Number(price) || 0,
+              currency: currency,
+              location: location || "Ubicación",
+              images: images ? images.split("\n").filter(Boolean) : [],
+              rooms: Number(rooms) || undefined,
+              propertyType: propertyType,
+              agency: role === "agency" 
+                ? { 
+                    plan: agencyPlan, 
+                    logo: undefined, 
+                    whatsapp: undefined 
+                  } 
+                : { 
+                    plan: plan, 
+                    logo: undefined, 
+                    whatsapp: undefined 
+                  },
+            }}
+          />
+          <Typography variant="caption" sx={{ display: "block", mt: 2, color: "text.secondary" }}>
+            ℹ️ Esta es una vista previa. El inmueble se verá así una vez publicado.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenPreview(false)}>Cerrar</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Snackbar para notificaciones */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert 
+          onClose={() => setSnackbar({ ...snackbar, open: false })} 
+          severity={snackbar.severity}
+          sx={{ width: "100%" }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </main>
   );
 }

@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false });
     }
 
-    const adminEmail = "arielvidela37@gmail.com"; // Email del admin
+    const adminEmail = "ariel_videla@hotmail.com"; // Email del admin (debe estar registrado en Resend)
 
     const htmlContent = `
       <!DOCTYPE html>

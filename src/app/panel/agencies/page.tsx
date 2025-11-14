@@ -42,7 +42,7 @@ export default function AgenciesPage() {
   const [agencies, setAgencies] = useState<Agency[]>([]);
   const [error, setError] = useState<string | null>(null);
   
-  // Modal
+  // Modal de crear/editar
   const [openDialog, setOpenDialog] = useState(false);
   const [editingAgency, setEditingAgency] = useState<Agency | null>(null);
   const [form, setForm] = useState({
@@ -53,6 +53,11 @@ export default function AgenciesPage() {
     plan: "free" as "free" | "pro" | "premium",
     logo: "",
   });
+
+  // Modal de cambio rápido de plan
+  const [planDialogOpen, setPlanDialogOpen] = useState(false);
+  const [planEditAgency, setPlanEditAgency] = useState<Agency | null>(null);
+  const [newPlan, setNewPlan] = useState<"free" | "pro" | "premium">("free");
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -152,6 +157,35 @@ export default function AgenciesPage() {
     }
   }
 
+  function handleOpenPlanDialog(agency: Agency) {
+    setPlanEditAgency(agency);
+    setNewPlan(agency.plan);
+    setPlanDialogOpen(true);
+  }
+
+  async function handleChangePlan() {
+    if (!planEditAgency) return;
+    
+    try {
+      const res = await fetch(`/api/admin/agencies/${planEditAgency._id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan: newPlan }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Error al cambiar plan");
+      }
+
+      loadAgencies();
+      setPlanDialogOpen(false);
+      setPlanEditAgency(null);
+    } catch (e: any) {
+      alert(e.message);
+    }
+  }
+
   function getPlanColor(plan: string) {
     if (plan === "premium") return "#D9A441";
     if (plan === "pro") return "#2A6EBB";
@@ -224,10 +258,15 @@ export default function AgenciesPage() {
                     <Chip
                       label={agency.plan?.toUpperCase() || "FREE"}
                       size="small"
+                      onClick={() => handleOpenPlanDialog(agency)}
                       sx={{
                         bgcolor: getPlanColor(agency.plan || "free"),
                         color: "#fff",
                         fontWeight: 700,
+                        cursor: "pointer",
+                        "&:hover": {
+                          opacity: 0.8,
+                        },
                       }}
                     />
                   </TableCell>
@@ -330,6 +369,49 @@ export default function AgenciesPage() {
             disabled={saving}
           >
             {saving ? "Guardando..." : "Guardar"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Modal de cambio rápido de plan */}
+      <Dialog open={planDialogOpen} onClose={() => setPlanDialogOpen(false)} maxWidth="xs" fullWidth>
+        <DialogTitle>Cambiar Plan</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" sx={{ mb: 2, color: "text.secondary" }}>
+            Inmobiliaria: <strong>{planEditAgency?.name}</strong>
+          </Typography>
+          <FormControl fullWidth>
+            <InputLabel>Nuevo Plan</InputLabel>
+            <Select
+              value={newPlan}
+              label="Nuevo Plan"
+              onChange={(e) => setNewPlan(e.target.value as any)}
+            >
+              <MenuItem value="free">
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <Box sx={{ width: 12, height: 12, borderRadius: "50%", bgcolor: "#4CAF50" }} />
+                  FREE - $0/mes
+                </Box>
+              </MenuItem>
+              <MenuItem value="pro">
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <Box sx={{ width: 12, height: 12, borderRadius: "50%", bgcolor: "#2A6EBB" }} />
+                  PRO - $100/mes
+                </Box>
+              </MenuItem>
+              <MenuItem value="premium">
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <Box sx={{ width: 12, height: 12, borderRadius: "50%", bgcolor: "#D9A441" }} />
+                  PREMIUM - $500/mes
+                </Box>
+              </MenuItem>
+            </Select>
+          </FormControl>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setPlanDialogOpen(false)}>Cancelar</Button>
+          <Button variant="contained" onClick={handleChangePlan}>
+            Cambiar Plan
           </Button>
         </DialogActions>
       </Dialog>
