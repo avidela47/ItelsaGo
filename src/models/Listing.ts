@@ -11,6 +11,19 @@ const ListingSchema = new Schema(
     operationType: { type: String, enum: ["venta", "alquiler", "temporario"], default: "venta" },
     images: { type: [String], default: [] },
     description: { type: String, default: "" },
+    
+    // Detalles de la propiedad
+    m2Total: { type: Number, default: 0 },
+    m2Cubiertos: { type: Number, default: 0 },
+    bathrooms: { type: Number, default: 0 },
+    bedrooms: { type: Number, default: 0 },
+    garage: { type: Boolean, default: false },
+    
+    // Geolocalización
+    lat: { type: Number },
+    lng: { type: Number },
+    
+    // Sistema
     agency: { type: Schema.Types.ObjectId, ref: "Agency" }, // Referencia a la colección Agency
     status: { type: String, enum: ["active", "suspended"], default: "active" },
   },

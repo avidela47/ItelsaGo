@@ -63,11 +63,19 @@ export default function PublicarPage() {
   const [price, setPrice] = useState<number | "">("");
   const [currency, setCurrency] = useState<"USD" | "ARS">("USD");
   const [propertyType, setPropertyType] = useState<PropertyType>("casa");
+  const [operationType, setOperationType] = useState<"venta" | "alquiler" | "temporario">("venta");
   const [rooms, setRooms] = useState<number | "">("");
   const [description, setDescription] = useState("");
   const [images, setImages] = useState<string>("");
   const [plan, setPlan] = useState<Plan>("free"); // por defecto free
   const [openPreview, setOpenPreview] = useState(false);
+  
+  // Nuevos campos
+  const [m2Total, setM2Total] = useState<number | "">("");
+  const [m2Cubiertos, setM2Cubiertos] = useState<number | "">("");
+  const [bathrooms, setBathrooms] = useState<number | "">("");
+  const [bedrooms, setBedrooms] = useState<number | "">("");
+  const [garage, setGarage] = useState(false);
 
   useEffect(() => {
     const r = getRoleFromCookie();
@@ -114,12 +122,20 @@ export default function PublicarPage() {
         price: Number(price) || 0,
         currency,
         propertyType,
+        operationType,
         rooms: Number(rooms) || undefined,
         description,
         images: images
           .split("\n")
           .map((l) => l.trim())
           .filter(Boolean),
+        
+        // Nuevos campos
+        m2Total: Number(m2Total) || undefined,
+        m2Cubiertos: Number(m2Cubiertos) || undefined,
+        bathrooms: Number(bathrooms) || undefined,
+        bedrooms: Number(bedrooms) || undefined,
+        garage,
       };
 
       // Solo el admin puede establecer el plan al crear
@@ -171,6 +187,12 @@ export default function PublicarPage() {
       setRooms("");
       setDescription("");
       setImages("");
+      setM2Total("");
+      setM2Cubiertos("");
+      setBathrooms("");
+      setBedrooms("");
+      setGarage(false);
+      setOperationType("venta");
       if (role === "admin") setPlan("free");
     } catch (err: any) {
       setSnackbar({ open: true, message: err?.message || "Error al publicar", severity: "error" });
@@ -328,6 +350,63 @@ export default function PublicarPage() {
           fullWidth
         />
 
+        <TextField
+          select
+          label="Tipo de operación"
+          value={operationType}
+          onChange={(e) => setOperationType(e.target.value as "venta" | "alquiler" | "temporario")}
+          fullWidth
+        >
+          <MenuItem value="venta">Venta</MenuItem>
+          <MenuItem value="alquiler">Alquiler</MenuItem>
+          <MenuItem value="temporario">Temporario</MenuItem>
+        </TextField>
+
+        <TextField
+          label="M² Totales"
+          type="number"
+          value={m2Total}
+          onChange={(e) => setM2Total(e.target.value === "" ? "" : Number(e.target.value))}
+          fullWidth
+          helperText="Superficie total del terreno"
+        />
+
+        <TextField
+          label="M² Cubiertos"
+          type="number"
+          value={m2Cubiertos}
+          onChange={(e) => setM2Cubiertos(e.target.value === "" ? "" : Number(e.target.value))}
+          fullWidth
+          helperText="Superficie construida"
+        />
+
+        <TextField
+          label="Dormitorios"
+          type="number"
+          value={bedrooms}
+          onChange={(e) => setBedrooms(e.target.value === "" ? "" : Number(e.target.value))}
+          fullWidth
+        />
+
+        <TextField
+          label="Baños"
+          type="number"
+          value={bathrooms}
+          onChange={(e) => setBathrooms(e.target.value === "" ? "" : Number(e.target.value))}
+          fullWidth
+        />
+
+        <TextField
+          select
+          label="Cochera"
+          value={garage ? "true" : "false"}
+          onChange={(e) => setGarage(e.target.value === "true")}
+          fullWidth
+        >
+          <MenuItem value="false">No</MenuItem>
+          <MenuItem value="true">Sí</MenuItem>
+        </TextField>
+
         {/* PLAN – SOLO ADMIN LO VE */}
         {role === "admin" && (
           <TextField
@@ -465,6 +544,12 @@ export default function PublicarPage() {
               images: images ? images.split("\n").filter(Boolean) : [],
               rooms: Number(rooms) || undefined,
               propertyType: propertyType,
+              operationType: operationType,
+              m2Total: Number(m2Total) || undefined,
+              m2Cubiertos: Number(m2Cubiertos) || undefined,
+              bathrooms: Number(bathrooms) || undefined,
+              bedrooms: Number(bedrooms) || undefined,
+              garage: garage,
               agency: role === "agency" 
                 ? { 
                     plan: agencyPlan, 
