@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { connectDB } from "@/lib/mongo";
+import { dbConnect } from "@/lib/mongo";
 import User from "@/models/User";
 import Listing from "@/models/Listing";
 
 export async function POST(req: NextRequest) {
   try {
-    await connectDB();
+    await dbConnect();
 
     // Obtener userId de las cookies
     const userId = req.cookies.get("uid")?.value;
