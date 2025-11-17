@@ -192,22 +192,26 @@ export default function FiltersBar({ value, onChange, items, onPlanesClick }: Pr
             all: { 
               bg: "linear-gradient(135deg,rgba(0,208,255,.25),rgba(0,255,225,.18))", 
               border: "rgba(0,208,255,.45)",
-              solid: "#00d0ff"
+              solid: "#00d0ff",
+              hover: "linear-gradient(135deg,rgba(0,208,255,.35),rgba(0,255,225,.28))"
             },
             premium: { 
               bg: "#D9A441", 
               border: "#D9A441",
-              solid: "#D9A441"
+              solid: "#D9A441",
+              hover: "#C89331"
             },
             pro: { 
               bg: "#2A6EBB", 
               border: "#2A6EBB",
-              solid: "#2A6EBB"
+              solid: "#2A6EBB",
+              hover: "#1F5AAA"
             },
             free: { 
               bg: "#4CAF50", 
               border: "#4CAF50",
-              solid: "#4CAF50"
+              solid: "#4CAF50",
+              hover: "#3D9840"
             },
           };
           
@@ -225,7 +229,7 @@ export default function FiltersBar({ value, onChange, items, onPlanesClick }: Pr
                   border: `1px solid ${planColors[p].border}`,
                   color: "#ffffff",
                   "&:hover": {
-                    background: planColors[p].solid,
+                    background: planColors[p].hover,
                     opacity: 0.9,
                   },
                 }),
@@ -233,7 +237,8 @@ export default function FiltersBar({ value, onChange, items, onPlanesClick }: Pr
                   borderColor: planColors[p].border,
                   color: planColors[p].solid,
                   "&:hover": {
-                    background: `${planColors[p].solid}20`,
+                    background: planColors[p].hover,
+                    borderColor: planColors[p].border,
                   },
                 },
               }}
