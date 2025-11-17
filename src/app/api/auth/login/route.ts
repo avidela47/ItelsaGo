@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
       email: user.email,
     });
 
-    res.cookies.set("role", role, { httpOnly: true, sameSite: "lax", path: "/" });
+    res.cookies.set("role", role, { httpOnly: false, sameSite: "lax", path: "/" });
     res.cookies.set("uid", String(user._id), { httpOnly: true, sameSite: "lax", path: "/" });
     res.cookies.set("name", user.name || "", {
       httpOnly: false,

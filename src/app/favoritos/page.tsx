@@ -30,7 +30,7 @@ export default function FavoritosPage() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
-    // Verificar si está logueado usando "role" que NO es httpOnly
+    // Verificar si está logueado usando cookie "role" que NO es httpOnly
     const role = document.cookie.match(/(?:^|;)\s*role=([^;]+)/)?.[1];
     const isLogged = !!role && role !== "guest";
     setIsLoggedIn(isLogged);

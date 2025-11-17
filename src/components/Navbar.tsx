@@ -8,9 +8,20 @@ export default function Navbar() {
   const [role, setRole] = useState<string | null>(null);
 
   useEffect(() => {
-    // Leer rol del localStorage
     const checkRole = () => {
-      const r = window.localStorage.getItem("role");
+      // Primero intentar leer de localStorage
+      let r = window.localStorage.getItem("role");
+      
+      // Si no hay en localStorage, intentar leer de cookies
+      if (!r) {
+        const cookieRole = document.cookie.match(/(?:^|;)\s*role=([^;]+)/)?.[1];
+        if (cookieRole) {
+          r = cookieRole;
+          // Sincronizar con localStorage
+          localStorage.setItem("role", cookieRole);
+        }
+      }
+      
       setRole(r);
     };
     
