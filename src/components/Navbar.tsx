@@ -82,17 +82,28 @@ export default function Navbar() {
         )}
 
         {role === "user" && (
-          <button
-            onClick={() => {
-              localStorage.clear();
-              window.location.href = "/inmuebles";
-            }}
-            style={baseBtn}
-            onMouseEnter={(e) => Object.assign(e.currentTarget.style, hoverBtn)}
-            onMouseLeave={(e) => Object.assign(e.currentTarget.style, baseBtn)}
-          >
-            Salir
-          </button>
+          <>
+            <Link
+              href="/favoritos"
+              style={baseBtn}
+              onMouseEnter={(e) => Object.assign(e.currentTarget.style, hoverBtn)}
+              onMouseLeave={(e) => Object.assign(e.currentTarget.style, baseBtn)}
+            >
+              ❤️ Favoritos
+            </Link>
+
+            <button
+              onClick={() => {
+                localStorage.clear();
+                window.location.href = "/inmuebles";
+              }}
+              style={baseBtn}
+              onMouseEnter={(e) => Object.assign(e.currentTarget.style, hoverBtn)}
+              onMouseLeave={(e) => Object.assign(e.currentTarget.style, baseBtn)}
+            >
+              Salir
+            </button>
+          </>
         )}
 
         {role === "agency" && (
