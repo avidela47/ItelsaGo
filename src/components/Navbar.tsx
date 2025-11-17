@@ -128,6 +128,19 @@ export default function Navbar() {
         {role === "agency" && (
           <>
             <Link
+              href="/panel/agencia"
+              style={baseBtn}
+              onMouseEnter={(e) =>
+                Object.assign(e.currentTarget.style, hoverBtn)
+              }
+              onMouseLeave={(e) =>
+                Object.assign(e.currentTarget.style, baseBtn)
+              }
+            >
+              Panel
+            </Link>
+
+            <Link
               href="/publicar"
               style={baseBtn}
               onMouseEnter={(e) =>

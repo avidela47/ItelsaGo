@@ -26,6 +26,8 @@ const ListingSchema = new Schema(
     // Sistema
     agency: { type: Schema.Types.ObjectId, ref: "Agency" }, // Referencia a la colección Agency
     status: { type: String, enum: ["active", "suspended"], default: "active" },
+    views: { type: Number, default: 0 }, // Contador de vistas
+    featured: { type: Boolean, default: false }, // Destacado en portada
   },
   { timestamps: true }
 );
