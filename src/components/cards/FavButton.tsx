@@ -12,11 +12,13 @@ export default function FavButton({ id }: { id: string }) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
-    // Verificar si está logueado
-    const uid = document.cookie.match(/(?:^|;)\s*uid=([^;]+)/)?.[1];
-    setIsLoggedIn(!!uid);
+    // Verificar si está logueado usando la cookie "role" que NO es httpOnly
+    const role = document.cookie.match(/(?:^|;)\s*role=([^;]+)/)?.[1];
+    const isLogged = !!role && role !== "guest";
+    console.log("FavButton - role:", role, "isLogged:", isLogged);
+    setIsLoggedIn(isLogged);
     
-    if (!uid) return;
+    if (!isLogged) return;
 
     // Cargar estado inicial de favoritos
     checkIfFavorite();
@@ -39,7 +41,12 @@ export default function FavButton({ id }: { id: string }) {
     e.preventDefault();
     e.stopPropagation();
 
-    if (!isLoggedIn) {
+    // Verificar login usando "role" que SÍ es accesible desde JS
+    const role = document.cookie.match(/(?:^|;)\s*role=([^;]+)/)?.[1];
+    console.log("Click en favorito - role:", role, "isLoggedIn state:", isLoggedIn);
+    
+    if (!role || role === "guest") {
+      console.log("No logueado o guest, redirigiendo a login");
       // Redirigir al login si no está logueado
       window.location.href = "/login?from=inmuebles";
       return;
