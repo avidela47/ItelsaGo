@@ -8,32 +8,42 @@ import CircularProgress from "@mui/material/CircularProgress";
 
 export default function FavButton({ id }: { id: string }) {
   const [isFavorite, setIsFavorite] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
-    // Verificar si está logueado usando la cookie "role" que NO es httpOnly
-    const role = document.cookie.match(/(?:^|;)\s*role=([^;]+)/)?.[1];
-    const isLogged = !!role && role !== "guest";
-    console.log("FavButton - role:", role, "isLogged:", isLogged);
-    setIsLoggedIn(isLogged);
-    
-    if (!isLogged) return;
-
-    // Cargar estado inicial de favoritos
-    checkIfFavorite();
+    checkAuth();
   }, [id]);
 
-  async function checkIfFavorite() {
+  async function checkAuth() {
     try {
       const res = await fetch("/api/user/favorites");
-      if (!res.ok) return;
       
+      if (res.status === 401 || res.status === 403) {
+        console.log("FavButton - No logueado, status:", res.status);
+        setIsLoggedIn(false);
+        setLoading(false);
+        return;
+      }
+
+      if (!res.ok) {
+        console.error("FavButton - Error verificar favoritos:", res.status);
+        setIsLoggedIn(false);
+        setLoading(false);
+        return;
+      }
+
       const data = await res.json();
       const favorites = data.favorites || [];
-      setIsFavorite(favorites.some((fav: any) => fav._id === id));
+      const isFav = favorites.some((fav: any) => fav._id === id);
+      setIsFavorite(isFav);
+      setIsLoggedIn(true);
+      console.log("FavButton - Logueado, favoritos:", favorites.length);
     } catch (error) {
-      console.error("Error checking favorite:", error);
+      console.error("FavButton - Error auth:", error);
+      setIsLoggedIn(false);
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -41,17 +51,13 @@ export default function FavButton({ id }: { id: string }) {
     e.preventDefault();
     e.stopPropagation();
 
-    // Verificar login usando "role" que SÍ es accesible desde JS
-    const role = document.cookie.match(/(?:^|;)\s*role=([^;]+)/)?.[1];
-    console.log("Click en favorito - role:", role, "isLoggedIn state:", isLoggedIn);
-    
-    if (!role || role === "guest") {
-      console.log("No logueado o guest, redirigiendo a login");
-      // Redirigir al login si no está logueado
+    if (!isLoggedIn) {
+      console.log("FavButton - Redirigiendo a login");
       window.location.href = "/login?from=inmuebles";
       return;
     }
 
+    console.log("FavButton - Toggle, actual:", isFavorite);
     setLoading(true);
 
     try {
@@ -69,16 +75,17 @@ export default function FavButton({ id }: { id: string }) {
         throw new Error(data.error || "Error al actualizar favorito");
       }
 
-      setIsFavorite(!isFavorite);
+      const newState = !isFavorite;
+      setIsFavorite(newState);
+      console.log("FavButton - Actualizado a:", newState);
     } catch (error: any) {
-      console.error("Error toggling favorite:", error);
+      console.error("FavButton - Error toggle:", error);
       alert(error.message || "Error al actualizar favorito");
     } finally {
       setLoading(false);
     }
   }
 
-  // Ahora el botón SIEMPRE se muestra, redirige a login si no está autenticado
   return (
     <IconButton
       onClick={toggleFavorite}
