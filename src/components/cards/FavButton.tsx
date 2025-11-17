@@ -40,7 +40,8 @@ export default function FavButton({ id }: { id: string }) {
     e.stopPropagation();
 
     if (!isLoggedIn) {
-      alert("Debés iniciar sesión para guardar favoritos");
+      // Redirigir al login si no está logueado
+      window.location.href = "/login?from=inmuebles";
       return;
     }
 
@@ -70,10 +71,7 @@ export default function FavButton({ id }: { id: string }) {
     }
   }
 
-  if (!isLoggedIn) {
-    return null; // No mostrar el botón si no está logueado
-  }
-
+  // Ahora el botón SIEMPRE se muestra, redirige a login si no está autenticado
   return (
     <IconButton
       onClick={toggleFavorite}
