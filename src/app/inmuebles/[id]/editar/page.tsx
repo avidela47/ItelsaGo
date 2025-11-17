@@ -17,6 +17,7 @@ import {
   Paper,
 } from "@mui/material";
 import ConfirmDeleteDialog from "@/components/cards/ConfirmDeleteDialog";
+import MapPicker from "@/components/maps/MapPicker";
 
 type Currency = "ARS" | "USD";
 type PropertyType = "depto" | "casa" | "lote" | "local";
@@ -70,6 +71,9 @@ export default function EditarInmueblePage() {
   );
   const [openDelete, setOpenDelete] = useState(false);
   const [role, setRole] = useState<string | null>(null);
+
+  // Estado para geolocalización
+  const [mapLocation, setMapLocation] = useState<{ lat: number; lng: number; address?: string } | null>(null);
 
   const [f, setF] = useState<FormState>({
     title: "",
@@ -133,6 +137,15 @@ export default function EditarInmueblePage() {
           agencyLogo: it.agency?.logo || "",
           agencyPlan: it.agency?.plan || "free",
         });
+        
+        // Cargar coordenadas si existen
+        if (typeof it.lat === "number" && typeof it.lng === "number") {
+          setMapLocation({
+            lat: it.lat,
+            lng: it.lng,
+            address: it.location || "",
+          });
+        }
       } catch {
         setMsg({ type: "err", text: "Error de red" });
       } finally {
@@ -179,6 +192,8 @@ export default function EditarInmueblePage() {
           agency: f.agencyLogo
             ? { logo: f.agencyLogo, plan: f.agencyPlan }
             : { plan: f.agencyPlan },
+          lat: mapLocation?.lat,
+          lng: mapLocation?.lng,
         }),
       });
       const data = await res.json();
@@ -462,6 +477,11 @@ export default function EditarInmueblePage() {
                 onChange={(e) => set("description", e.target.value)}
                 fullWidth
               />
+
+              {/* MAPA SELECTOR DE UBICACIÓN */}
+              <Box>
+                <MapPicker value={mapLocation} onChange={setMapLocation} height={350} />
+              </Box>
 
               <Box
                 sx={{

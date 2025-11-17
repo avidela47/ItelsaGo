@@ -52,6 +52,8 @@ export async function PUT(req: NextRequest, { params }: Params) {
       images,
       description,
       agency,
+      lat,
+      lng,
     } = body;
 
     // Si es agency, verificar que sea dueño de la propiedad
@@ -82,6 +84,8 @@ export async function PUT(req: NextRequest, { params }: Params) {
       operationType,
       description,
       agency,
+      lat,
+      lng,
     };
 
     if (images) {
