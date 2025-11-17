@@ -20,6 +20,7 @@ import DialogContent from "@mui/material/DialogContent";
 import DialogActions from "@mui/material/DialogActions";
 import PropertyCard from "@/components/cards/PropertyCard";
 import MapPicker from "@/components/maps/MapPicker";
+import ImageUploader from "@/components/upload/ImageUploader";
 
 type Role = "guest" | "user" | "agency" | "admin";
 type Plan = "free" | "pro" | "premium";
@@ -67,7 +68,7 @@ export default function PublicarPage() {
   const [operationType, setOperationType] = useState<"venta" | "alquiler" | "temporario">("venta");
   const [rooms, setRooms] = useState<number | "">("");
   const [description, setDescription] = useState("");
-  const [images, setImages] = useState<string>("");
+  const [images, setImages] = useState<string[]>([]);
   const [plan, setPlan] = useState<Plan>("free"); // por defecto free
   const [openPreview, setOpenPreview] = useState(false);
   
@@ -129,10 +130,7 @@ export default function PublicarPage() {
         operationType,
         rooms: Number(rooms) || undefined,
         description,
-        images: images
-          .split("\n")
-          .map((l) => l.trim())
-          .filter(Boolean),
+        images: images, // Ya es un array de URLs
         
         // Nuevos campos
         m2Total: Number(m2Total) || undefined,
@@ -194,7 +192,7 @@ export default function PublicarPage() {
       setPrice("");
       setRooms("");
       setDescription("");
-      setImages("");
+      setImages([]);
       setM2Total("");
       setM2Cubiertos("");
       setBathrooms("");
@@ -431,80 +429,10 @@ export default function PublicarPage() {
           </TextField>
         )}
 
-        <TextField
-          label="URLs de imágenes (una por línea)"
-          value={images}
-          onChange={(e) => setImages(e.target.value)}
-          fullWidth
-          multiline
-          minRows={4}
-          sx={{ gridColumn: "1 / -1" }}
-          helperText="Pegá las URLs de las imágenes, una por línea. Se mostrarán abajo."
-        />
-
-        {/* Previsualización de imágenes */}
-        {images.trim() && (
-          <Box sx={{ gridColumn: "1 / -1" }}>
-            <Typography variant="body2" sx={{ mb: 1, color: "text.secondary", fontWeight: 600 }}>
-              Vista previa de imágenes:
-            </Typography>
-            <Box sx={{ 
-              display: "grid", 
-              gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", 
-              gap: 1 
-            }}>
-              {images.split("\n").filter(url => url.trim()).map((url, idx) => (
-                <Box
-                  key={idx}
-                  sx={{
-                    position: "relative",
-                    aspectRatio: "16/10",
-                    borderRadius: 1,
-                    overflow: "hidden",
-                    border: "1px solid rgba(255,255,255,.12)",
-                    bgcolor: "rgba(255,255,255,.03)",
-                  }}
-                >
-                  <img
-                    src={url.trim()}
-                    alt={`Preview ${idx + 1}`}
-                    style={{
-                      width: "100%",
-                      height: "100%",
-                      objectFit: "cover",
-                    }}
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = "none";
-                      const parent = (e.target as HTMLElement).parentElement;
-                      if (parent) {
-                        parent.style.display = "flex";
-                        parent.style.alignItems = "center";
-                        parent.style.justifyContent = "center";
-                        parent.innerHTML = '<span style="color: #f44336; font-size: 12px;">❌ Error</span>';
-                      }
-                    }}
-                  />
-                  <Box
-                    sx={{
-                      position: "absolute",
-                      top: 4,
-                      right: 4,
-                      bgcolor: "rgba(0,0,0,.7)",
-                      color: "#fff",
-                      px: 0.8,
-                      py: 0.3,
-                      borderRadius: 0.5,
-                      fontSize: 11,
-                      fontWeight: 700,
-                    }}
-                  >
-                    {idx + 1}
-                  </Box>
-                </Box>
-              ))}
-            </Box>
-          </Box>
-        )}
+        {/* COMPONENTE DE SUBIDA DE IMÁGENES */}
+        <Box sx={{ gridColumn: "1 / -1" }}>
+          <ImageUploader value={images} onChange={setImages} maxImages={18} maxSizeMB={5} />
+        </Box>
 
         <TextField
           label="Descripción"
@@ -555,7 +483,7 @@ export default function PublicarPage() {
               price: Number(price) || 0,
               currency: currency,
               location: location || "Ubicación",
-              images: images ? images.split("\n").filter(Boolean) : [],
+              images: images, // Ya es un array
               rooms: Number(rooms) || undefined,
               propertyType: propertyType,
               operationType: operationType,
