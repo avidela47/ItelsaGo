@@ -19,6 +19,7 @@ import DialogTitle from "@mui/material/DialogTitle";
 import DialogContent from "@mui/material/DialogContent";
 import DialogActions from "@mui/material/DialogActions";
 import PropertyCard from "@/components/cards/PropertyCard";
+import MapPicker from "@/components/maps/MapPicker";
 
 type Role = "guest" | "user" | "agency" | "admin";
 type Plan = "free" | "pro" | "premium";
@@ -76,6 +77,9 @@ export default function PublicarPage() {
   const [bathrooms, setBathrooms] = useState<number | "">("");
   const [bedrooms, setBedrooms] = useState<number | "">("");
   const [garage, setGarage] = useState(false);
+  
+  // Geolocalización
+  const [mapLocation, setMapLocation] = useState<{ lat: number; lng: number; address?: string } | null>(null);
 
   useEffect(() => {
     const r = getRoleFromCookie();
@@ -136,6 +140,10 @@ export default function PublicarPage() {
         bathrooms: Number(bathrooms) || undefined,
         bedrooms: Number(bedrooms) || undefined,
         garage,
+        
+        // Geolocalización
+        lat: mapLocation?.lat,
+        lng: mapLocation?.lng,
       };
 
       // Solo el admin puede establecer el plan al crear
@@ -192,6 +200,7 @@ export default function PublicarPage() {
       setBathrooms("");
       setBedrooms("");
       setGarage(false);
+      setMapLocation(null);
       setOperationType("venta");
       if (role === "admin") setPlan("free");
     } catch (err: any) {
@@ -506,6 +515,11 @@ export default function PublicarPage() {
           minRows={4}
           sx={{ gridColumn: "1 / -1" }}
         />
+
+        {/* MAPA SELECTOR DE UBICACIÓN */}
+        <Box sx={{ gridColumn: "1 / -1" }}>
+          <MapPicker value={mapLocation} onChange={setMapLocation} height={350} />
+        </Box>
 
         <Box sx={{ gridColumn: "1 / -1", mt: 1, display: "flex", gap: 2, justifyContent: "flex-end" }}>
           <Button

@@ -21,6 +21,7 @@ import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EmailIcon from "@mui/icons-material/Email";
 import PropertyCard from "@/components/cards/PropertyCard";
+import MapView from "@/components/maps/MapView";
 
 type Plan = "premium" | "pro" | "sponsor" | "free";
 
@@ -468,24 +469,16 @@ export default function InmueblePage() {
             </Box>
           )}
 
-          {/* Mapa (opcional) */}
+          {/* Mapa interactivo con Leaflet */}
           {typeof item.lat === "number" && typeof item.lng === "number" && (
-            <Box sx={{ mt: 3 }}>
-              <Typography variant="h6" fontWeight={700} sx={{ mb: 1 }}>
-                Ubicación
-              </Typography>
-              <Box sx={{ borderRadius: 2, overflow: "hidden", border: "1px solid rgba(255,255,255,.1)" }}>
-                <iframe
-                  title="map"
-                  width="100%"
-                  height="320"
-                  style={{ border: 0 }}
-                  loading="lazy"
-                  allowFullScreen
-                  referrerPolicy="no-referrer-when-downgrade"
-                  src={`https://www.google.com/maps?q=${item.lat},${item.lng}&hl=es&z=15&output=embed`}
-                />
-              </Box>
+            <Box sx={{ mt: 4 }}>
+              <MapView
+                lat={item.lat}
+                lng={item.lng}
+                address={item.location}
+                height={400}
+                title="Ubicación"
+              />
             </Box>
           )}
         </Box>
