@@ -35,6 +35,17 @@ export default function Navbar() {
     };
   }, []);
 
+  // Función de logout que elimina cookies y localStorage
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } catch (e) {
+      console.error("Error al cerrar sesión:", e);
+    }
+    localStorage.clear();
+    window.location.href = "/inmuebles";
+  };
+
   // BOTÓN VERDE ITELSA
   const baseBtn: React.CSSProperties = {
     background: "linear-gradient(135deg,rgba(0,208,255,.25),rgba(0,255,225,.18))",
@@ -104,10 +115,7 @@ export default function Navbar() {
             </Link>
 
             <button
-              onClick={() => {
-                localStorage.clear();
-                window.location.href = "/inmuebles";
-              }}
+              onClick={handleLogout}
               style={baseBtn}
               onMouseEnter={(e) => Object.assign(e.currentTarget.style, hoverBtn)}
               onMouseLeave={(e) => Object.assign(e.currentTarget.style, baseBtn)}
@@ -133,10 +141,7 @@ export default function Navbar() {
             </Link>
 
             <button
-              onClick={() => {
-                localStorage.clear();
-                window.location.href = "/inmuebles";
-              }}
+              onClick={handleLogout}
               style={baseBtn}
               onMouseEnter={(e) => Object.assign(e.currentTarget.style, hoverBtn)}
               onMouseLeave={(e) => Object.assign(e.currentTarget.style, baseBtn)}
@@ -175,10 +180,7 @@ export default function Navbar() {
             </Link>
 
             <button
-              onClick={() => {
-                localStorage.clear();
-                window.location.href = "/inmuebles";
-              }}
+              onClick={handleLogout}
               style={baseBtn}
               onMouseEnter={(e) => Object.assign(e.currentTarget.style, hoverBtn)}
               onMouseLeave={(e) => Object.assign(e.currentTarget.style, baseBtn)}
