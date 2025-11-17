@@ -10,6 +10,7 @@ export interface IUser extends Document {
   role: UserRole;
   plan?: SubscriptionPlan;
   subscriptionDate?: Date;
+  favoriteListings?: mongoose.Types.ObjectId[];
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -30,6 +31,7 @@ const UserSchema = new Schema<IUser>(
       default: "free",
     },
     subscriptionDate: { type: Date },
+    favoriteListings: [{ type: Schema.Types.ObjectId, ref: "Listing" }],
   },
   {
     timestamps: true,

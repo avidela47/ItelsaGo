@@ -1,53 +1,100 @@
 "use client";
 
 import { useEffect, useState } from "react";
-
-const KEY = "itelsa:favs";
-
-function readFavs(): Record<string, true> {
-  try {
-    const s = localStorage.getItem(KEY);
-    return s ? JSON.parse(s) : {};
-  } catch { return {}; }
-}
-function writeFavs(map: Record<string, true>) {
-  try { localStorage.setItem(KEY, JSON.stringify(map)); } catch {}
-}
+import IconButton from "@mui/material/IconButton";
+import FavoriteIcon from "@mui/icons-material/Favorite";
+import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
+import CircularProgress from "@mui/material/CircularProgress";
 
 export default function FavButton({ id }: { id: string }) {
-  const [on, setOn] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
-    const map = readFavs();
-    setOn(Boolean(map[id]));
+    // Verificar si está logueado
+    const uid = document.cookie.match(/(?:^|;)\s*uid=([^;]+)/)?.[1];
+    setIsLoggedIn(!!uid);
+    
+    if (!uid) return;
+
+    // Cargar estado inicial de favoritos
+    checkIfFavorite();
   }, [id]);
 
-  function toggle(e: React.MouseEvent) {
+  async function checkIfFavorite() {
+    try {
+      const res = await fetch("/api/user/favorites");
+      if (!res.ok) return;
+      
+      const data = await res.json();
+      const favorites = data.favorites || [];
+      setIsFavorite(favorites.some((fav: any) => fav._id === id));
+    } catch (error) {
+      console.error("Error checking favorite:", error);
+    }
+  }
+
+  async function toggleFavorite(e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
-    const map = readFavs();
-    if (map[id]) { delete map[id]; setOn(false); }
-    else { map[id] = true; setOn(true); }
-    writeFavs(map);
+
+    if (!isLoggedIn) {
+      alert("Debés iniciar sesión para guardar favoritos");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const endpoint = isFavorite ? "/api/user/favorites/remove" : "/api/user/favorites/add";
+      const method = isFavorite ? "DELETE" : "POST";
+
+      const res = await fetch(endpoint, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ listingId: id }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Error al actualizar favorito");
+      }
+
+      setIsFavorite(!isFavorite);
+    } catch (error: any) {
+      console.error("Error toggling favorite:", error);
+      alert(error.message || "Error al actualizar favorito");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (!isLoggedIn) {
+    return null; // No mostrar el botón si no está logueado
   }
 
   return (
-    <button
-      onClick={toggle}
-      aria-label={on ? "Quitar de favoritos" : "Agregar a favoritos"}
-      style={{
-        width: 30,
-        height: 30,
-        borderRadius: 999,
-        border: "1px solid rgba(0,0,0,.25)",
-        background: on ? "rgba(255, 0, 80, .9)" : "rgba(255,255,255,.85)",
-        color: on ? "white" : "#0b0b0f",
-        fontWeight: 900,
-        cursor: "pointer",
+    <IconButton
+      onClick={toggleFavorite}
+      disabled={loading}
+      aria-label={isFavorite ? "Quitar de favoritos" : "Agregar a favoritos"}
+      sx={{
+        width: 40,
+        height: 40,
+        bgcolor: "rgba(255,255,255,.9)",
+        "&:hover": {
+          bgcolor: "rgba(255,255,255,1)",
+        },
       }}
-      title={on ? "Quitar de favoritos" : "Agregar a favoritos"}
     >
-      {on ? "♥" : "♡"}
-    </button>
+      {loading ? (
+        <CircularProgress size={20} />
+      ) : isFavorite ? (
+        <FavoriteIcon sx={{ color: "#ff0050" }} />
+      ) : (
+        <FavoriteBorderIcon sx={{ color: "#000" }} />
+      )}
+    </IconButton>
   );
 }
