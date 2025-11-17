@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import Chip from "@mui/material/Chip";
@@ -21,7 +22,12 @@ import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EmailIcon from "@mui/icons-material/Email";
 import PropertyCard from "@/components/cards/PropertyCard";
-import MapView from "@/components/maps/MapView";
+
+// Importar MapView dinámicamente para evitar SSR
+const MapView = dynamic(() => import("@/components/maps/MapView"), {
+  ssr: false,
+  loading: () => <Box sx={{ height: 400, display: "flex", alignItems: "center", justifyContent: "center" }}><CircularProgress /></Box>
+});
 
 type Plan = "premium" | "pro" | "sponsor" | "free";
 

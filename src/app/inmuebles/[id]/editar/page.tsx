@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
   Box,
@@ -73,7 +73,7 @@ export default function EditarInmueblePage() {
   const [role, setRole] = useState<string | null>(null);
 
   // Estado para geolocalización
-  const [mapLocation, setMapLocation] = useState<{ lat: number; lng: number; address?: string } | null>(null);
+  const [mapLocation, setMapLocation] = useState<{ lat: number; lng: number } | null>(null);
 
   const [f, setF] = useState<FormState>({
     title: "",
@@ -89,8 +89,10 @@ export default function EditarInmueblePage() {
     agencyPlan: "free",
   });
 
-  const set = <K extends keyof FormState>(k: K, v: FormState[K]) =>
+  const set = <K extends keyof FormState>(k: K, v: FormState[K]) => {
     setF((s) => ({ ...s, [k]: v }));
+  };
+  
   const imageList = useMemo(
     () => splitUrls(f.images).slice(0, 18),
     [f.images]
@@ -143,7 +145,6 @@ export default function EditarInmueblePage() {
           setMapLocation({
             lat: it.lat,
             lng: it.lng,
-            address: it.location || "",
           });
         }
       } catch {
@@ -175,6 +176,7 @@ export default function EditarInmueblePage() {
 
     setBusy(true);
     setMsg(null);
+    
     try {
       const res = await fetch(`/api/listings/${id}`, {
         method: "PUT",
@@ -189,14 +191,12 @@ export default function EditarInmueblePage() {
           operationType: f.operationType,
           images: imageList,
           description: f.description,
-          agency: f.agencyLogo
-            ? { logo: f.agencyLogo, plan: f.agencyPlan }
-            : { plan: f.agencyPlan },
           lat: mapLocation?.lat,
           lng: mapLocation?.lng,
         }),
       });
       const data = await res.json();
+      
       if (!res.ok) {
         setMsg({
           type: "err",

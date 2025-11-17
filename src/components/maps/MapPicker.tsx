@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from "react-leaflet";
 import type { LatLngExpression } from "leaflet";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
@@ -21,15 +21,16 @@ if (typeof window !== "undefined") {
 }
 
 type Props = {
-  value: { lat: number; lng: number; address?: string } | null;
-  onChange: (location: { lat: number; lng: number; address?: string } | null) => void;
+  value: { lat: number; lng: number } | null;
+  onChange: (location: { lat: number; lng: number } | null) => void;
   height?: number;
 };
 
 // Componente interno que maneja los clicks en el mapa
-function LocationMarker({ position, onLocationSelect }: {
+function LocationMarker({ position, onLocationSelect, address }: {
   position: [number, number] | null;
   onLocationSelect: (lat: number, lng: number) => void;
+  address?: string;
 }) {
   useMapEvents({
     click(e) {
@@ -37,12 +38,26 @@ function LocationMarker({ position, onLocationSelect }: {
     },
   });
 
-  return position ? <Marker position={position} /> : null;
+  return position ? (
+    <Marker position={position}>
+      {address && (
+        <Popup>
+          <Box sx={{ minWidth: 150 }}>
+            <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
+              {address}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              {position[0].toFixed(6)}, {position[1].toFixed(6)}
+            </Typography>
+          </Box>
+        </Popup>
+      )}
+    </Marker>
+  ) : null;
 }
 
 export default function MapPicker({ value, onChange, height = 400 }: Props) {
   const [mounted, setMounted] = useState(false);
-  const [address, setAddress] = useState(value?.address || "");
   
   // Centro por defecto: Córdoba, Argentina
   const defaultCenter: LatLngExpression = [-31.4201, -64.1888];
@@ -52,25 +67,11 @@ export default function MapPicker({ value, onChange, height = 400 }: Props) {
     setMounted(true);
   }, []);
 
-  useEffect(() => {
-    if (value?.address) {
-      setAddress(value.address);
-    }
-  }, [value]);
-
   const handleLocationSelect = (lat: number, lng: number) => {
-    onChange({ lat, lng, address });
-  };
-
-  const handleAddressChange = (newAddress: string) => {
-    setAddress(newAddress);
-    if (value) {
-      onChange({ ...value, address: newAddress });
-    }
+    onChange({ lat, lng });
   };
 
   const handleClear = () => {
-    setAddress("");
     onChange(null);
   };
 
@@ -89,18 +90,8 @@ export default function MapPicker({ value, onChange, height = 400 }: Props) {
         📍 Ubicación en el mapa
       </Typography>
       <Typography variant="caption" color="text.secondary" sx={{ mb: 2, display: "block" }}>
-        Hacé click en el mapa para marcar la ubicación exacta de la propiedad
+        Hacé clic en el mapa para marcar la ubicación exacta de la propiedad. Escribí la dirección en el campo "Ubicación" arriba.
       </Typography>
-
-      <TextField
-        fullWidth
-        label="Dirección (opcional)"
-        value={address}
-        onChange={(e) => handleAddressChange(e.target.value)}
-        placeholder="Ej: Av. Colón 1234, Córdoba"
-        sx={{ mb: 2 }}
-        size="small"
-      />
 
       <Box sx={{ height, borderRadius: 2, overflow: "hidden", border: "2px solid #ddd", mb: 1 }}>
         <MapContainer
@@ -113,7 +104,10 @@ export default function MapPicker({ value, onChange, height = 400 }: Props) {
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
-          <LocationMarker position={currentPosition} onLocationSelect={handleLocationSelect} />
+          <LocationMarker 
+            position={currentPosition} 
+            onLocationSelect={handleLocationSelect}
+          />
         </MapContainer>
       </Box>
 

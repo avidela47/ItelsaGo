@@ -1,14 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { dbConnect } from "@/lib/mongo";
 import Listing from "@/models/Listing";
-import Agency from "@/models/Agency"; // ✅ Importar Agency para que Mongoose lo registre
+import "@/models/Agency"; // Importar para registrar el modelo
 import { isAdminFromRequest } from "@/lib/auth";
+import mongoose from "mongoose";
 
 type Params = { params: { id: string } };
 
 export async function GET(req: NextRequest, { params }: Params) {
   try {
     await dbConnect();
+    
+    // Asegurar que Agency esté registrado
+    const Agency = mongoose.models.Agency || require("@/models/Agency").default;
     
     const item = await Listing.findById(params.id)
       .populate("agency")
@@ -51,7 +55,6 @@ export async function PUT(req: NextRequest, { params }: Params) {
       operationType,
       images,
       description,
-      agency,
       lat,
       lng,
     } = body;
@@ -83,7 +86,6 @@ export async function PUT(req: NextRequest, { params }: Params) {
       propertyType,
       operationType,
       description,
-      agency,
       lat,
       lng,
     };
