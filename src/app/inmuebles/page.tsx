@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
-import CircularProgress from "@mui/material/CircularProgress";
 
 import FiltersBar, {
   FilterState,
@@ -13,6 +12,7 @@ import FiltersBar, {
 } from "@/components/FiltersBar";
 import PropertyCard from "@/components/cards/PropertyCard";
 import PlanesSection from "@/components/PlanesSection";
+import SkeletonCard from "@/components/SkeletonCard";
 
 type Item = {
   _id: string;
@@ -25,6 +25,11 @@ type Item = {
   propertyType?: "depto" | "casa" | "lote" | "local";
   agency?: { logo?: string; plan?: "premium" | "sponsor" | "pro" | "free" };
   createdAt?: string;
+  m2Total?: number;
+  m2Cubiertos?: number;
+  bedrooms?: number;
+  bathrooms?: number;
+  garage?: boolean;
 };
 
 export default function InmueblesPage() {
@@ -75,6 +80,11 @@ export default function InmueblesPage() {
     type: "all",
     price: [0, 1000000],
     rooms: "all",
+    m2Total: [0, 1000],
+    m2Cubiertos: [0, 500],
+    bedrooms: "all",
+    bathrooms: "all",
+    garage: "all",
   });
 
   useEffect(() => {
@@ -106,10 +116,27 @@ export default function InmueblesPage() {
       const rooms =
         typeof it.rooms === "number" ? it.rooms : undefined;
       const matchRooms =
-        filters.rooms === "all" ? true : rooms === Number(filters.rooms);
+        filters.rooms === "all" ? true : rooms !== undefined && rooms >= Number(filters.rooms);
+
+      const bedrooms = typeof it.bedrooms === "number" ? it.bedrooms : undefined;
+      const matchBedrooms =
+        filters.bedrooms === "all" ? true : bedrooms !== undefined && bedrooms >= Number(filters.bedrooms);
+
+      const bathrooms = typeof it.bathrooms === "number" ? it.bathrooms : undefined;
+      const matchBathrooms =
+        filters.bathrooms === "all" ? true : bathrooms !== undefined && bathrooms >= Number(filters.bathrooms);
+
+      const matchGarage =
+        filters.garage === "all" ? true : filters.garage === "true" ? it.garage === true : it.garage !== true;
 
       const p = Number(it.price || 0);
       const matchPrice = p >= filters.price[0] && p <= filters.price[1];
+
+      const m2T = Number(it.m2Total || 0);
+      const matchM2Total = m2T === 0 || (m2T >= filters.m2Total[0] && m2T <= filters.m2Total[1]);
+
+      const m2C = Number(it.m2Cubiertos || 0);
+      const matchM2Cubiertos = m2C === 0 || (m2C >= filters.m2Cubiertos[0] && m2C <= filters.m2Cubiertos[1]);
 
       return (
         matchQ &&
@@ -117,7 +144,12 @@ export default function InmueblesPage() {
         matchLoc &&
         matchType &&
         matchRooms &&
-        matchPrice
+        matchBedrooms &&
+        matchBathrooms &&
+        matchGarage &&
+        matchPrice &&
+        matchM2Total &&
+        matchM2Cubiertos
       );
     });
 
@@ -126,6 +158,7 @@ export default function InmueblesPage() {
       if (sort === "price_asc") return (a.price || 0) - (b.price || 0);
       if (sort === "price_desc") return (b.price || 0) - (a.price || 0);
       if (sort === "rooms_desc") return (b.rooms || 0) - (a.rooms || 0);
+      if (sort === "m2_desc") return (b.m2Total || 0) - (a.m2Total || 0);
 
       const da = a.createdAt ? Date.parse(a.createdAt) : 0;
       const db = b.createdAt ? Date.parse(b.createdAt) : 0;
@@ -152,19 +185,73 @@ export default function InmueblesPage() {
         onPlanesClick={() => setShowPlanes(true)}
       />
 
+      {/* CONTADOR DE RESULTADOS */}
+      {!loading && !error && (
+        <Box 
+          sx={{ 
+            display: "flex", 
+            justifyContent: "space-between", 
+            alignItems: "center",
+            mb: 2,
+            px: 1,
+          }}
+        >
+          <Typography 
+            sx={{ 
+              fontSize: 14, 
+              fontWeight: 600,
+              opacity: 0.85,
+            }}
+          >
+            {list.length === 0 ? (
+              "No hay resultados con los filtros aplicados"
+            ) : list.length === 1 ? (
+              "1 propiedad encontrada"
+            ) : (
+              `${list.length} propiedades encontradas`
+            )}
+          </Typography>
+          <Typography 
+            sx={{ 
+              fontSize: 12, 
+              opacity: 0.6,
+            }}
+          >
+            de {itemsAll.length} totales
+          </Typography>
+        </Box>
+      )}
+
       {/* RESULTADOS */}
       {loading ? (
-        <Box sx={{ display: "flex", justifyContent: "center", my: 4 }}>
-          <CircularProgress />
+        <Box
+          sx={{
+            display: "grid",
+            gap: 2,
+            gridTemplateColumns: {
+              xs: "1fr",
+              sm: "repeat(2, 1fr)",
+              md: "repeat(3, 1fr)",
+            },
+          }}
+        >
+          {Array.from({ length: 9 }).map((_, i) => (
+            <SkeletonCard key={i} />
+          ))}
         </Box>
       ) : error ? (
         <Typography color="error" sx={{ my: 3 }}>
           {error}
         </Typography>
       ) : list.length === 0 ? (
-        <Typography sx={{ opacity: 0.8, my: 3 }}>
-          No hay resultados con los filtros aplicados.
-        </Typography>
+        <Box sx={{ textAlign: "center", my: 6, opacity: 0.7 }}>
+          <Typography variant="h6" sx={{ mb: 1 }}>
+            🔍 No encontramos propiedades
+          </Typography>
+          <Typography variant="body2">
+            Intentá ajustar los filtros para ver más resultados
+          </Typography>
+        </Box>
       ) : (
         <Box
           sx={{
