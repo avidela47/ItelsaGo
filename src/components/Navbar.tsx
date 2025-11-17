@@ -8,9 +8,20 @@ export default function Navbar() {
   const [role, setRole] = useState<string | null>(null);
 
   useEffect(() => {
-    // Leer rol del localStorage
     const checkRole = () => {
-      const r = window.localStorage.getItem("role");
+      // Primero intentar leer de localStorage
+      let r = window.localStorage.getItem("role");
+      
+      // Si no hay en localStorage, intentar leer de cookies
+      if (!r) {
+        const cookieRole = document.cookie.match(/(?:^|;)\s*role=([^;]+)/)?.[1];
+        if (cookieRole) {
+          r = cookieRole;
+          // Sincronizar con localStorage
+          localStorage.setItem("role", cookieRole);
+        }
+      }
+      
       setRole(r);
     };
     
@@ -23,6 +34,17 @@ export default function Navbar() {
       window.removeEventListener("storage", checkRole);
     };
   }, []);
+
+  // Función de logout que elimina cookies y localStorage
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } catch (e) {
+      console.error("Error al cerrar sesión:", e);
+    }
+    localStorage.clear();
+    window.location.href = "/inmuebles";
+  };
 
   // BOTÓN VERDE ITELSA
   const baseBtn: React.CSSProperties = {
@@ -82,17 +104,25 @@ export default function Navbar() {
         )}
 
         {role === "user" && (
-          <button
-            onClick={() => {
-              localStorage.clear();
-              window.location.href = "/inmuebles";
-            }}
-            style={baseBtn}
-            onMouseEnter={(e) => Object.assign(e.currentTarget.style, hoverBtn)}
-            onMouseLeave={(e) => Object.assign(e.currentTarget.style, baseBtn)}
-          >
-            Salir
-          </button>
+          <>
+            <Link
+              href="/favoritos"
+              style={baseBtn}
+              onMouseEnter={(e) => Object.assign(e.currentTarget.style, hoverBtn)}
+              onMouseLeave={(e) => Object.assign(e.currentTarget.style, baseBtn)}
+            >
+              ❤️ Favoritos
+            </Link>
+
+            <button
+              onClick={handleLogout}
+              style={baseBtn}
+              onMouseEnter={(e) => Object.assign(e.currentTarget.style, hoverBtn)}
+              onMouseLeave={(e) => Object.assign(e.currentTarget.style, baseBtn)}
+            >
+              Salir
+            </button>
+          </>
         )}
 
         {role === "agency" && (
@@ -111,10 +141,7 @@ export default function Navbar() {
             </Link>
 
             <button
-              onClick={() => {
-                localStorage.clear();
-                window.location.href = "/inmuebles";
-              }}
+              onClick={handleLogout}
               style={baseBtn}
               onMouseEnter={(e) => Object.assign(e.currentTarget.style, hoverBtn)}
               onMouseLeave={(e) => Object.assign(e.currentTarget.style, baseBtn)}
@@ -153,10 +180,7 @@ export default function Navbar() {
             </Link>
 
             <button
-              onClick={() => {
-                localStorage.clear();
-                window.location.href = "/inmuebles";
-              }}
+              onClick={handleLogout}
               style={baseBtn}
               onMouseEnter={(e) => Object.assign(e.currentTarget.style, hoverBtn)}
               onMouseLeave={(e) => Object.assign(e.currentTarget.style, baseBtn)}

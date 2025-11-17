@@ -79,6 +79,13 @@ export async function POST(req: NextRequest) {
       images,
       description,
       agency,
+      m2Total,
+      m2Cubiertos,
+      bathrooms,
+      bedrooms,
+      garage,
+      lat,
+      lng,
     } = body;
 
     if (!title || !location || !price || !currency || !images) {
@@ -162,6 +169,13 @@ export async function POST(req: NextRequest) {
             .filter(Boolean),
       description,
       agency: finalAgency,
+      m2Total,
+      m2Cubiertos,
+      bathrooms,
+      bedrooms,
+      garage,
+      lat,
+      lng,
     });
 
     return NextResponse.json({ ok: true, id: String(doc._id) });

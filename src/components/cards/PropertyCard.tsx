@@ -5,6 +5,7 @@ import Typography from "@mui/material/Typography";
 import Chip from "@mui/material/Chip";
 import Button from "@mui/material/Button";
 import WhatsAppIcon from "@mui/icons-material/WhatsApp";
+import FavButton from "@/components/cards/FavButton";
 
 type Plan = "premium" | "pro" | "sponsor" | "free";
 
@@ -17,6 +18,12 @@ type Item = {
   images: string[];
   rooms?: number;
   propertyType?: string;
+  operationType?: string;
+  m2Total?: number;
+  m2Cubiertos?: number;
+  bathrooms?: number;
+  bedrooms?: number;
+  garage?: boolean;
   agency?: { logo?: string; plan?: Plan; whatsapp?: string };
   createdAt?: string;
 };
@@ -72,6 +79,11 @@ export default function PropertyCard({ item }: { item: Item }) {
           alt={item.title}
           style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
         />
+
+        {/* BOTÓN FAVORITO → ARRIBA IZQUIERDA */}
+        <Box sx={{ position: "absolute", top: 8, left: 8, zIndex: 10 }}>
+          <FavButton id={item._id} />
+        </Box>
 
         {/* BADGE PLAN → ARRIBA DERECHA */}
         {plan && (

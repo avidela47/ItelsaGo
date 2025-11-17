@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
   Box,
@@ -17,6 +17,8 @@ import {
   Paper,
 } from "@mui/material";
 import ConfirmDeleteDialog from "@/components/cards/ConfirmDeleteDialog";
+import MapPicker from "@/components/maps/MapPicker";
+import ImageUploader from "@/components/upload/ImageUploader";
 
 type Currency = "ARS" | "USD";
 type PropertyType = "depto" | "casa" | "lote" | "local";
@@ -31,22 +33,13 @@ type FormState = {
   rooms: string;
   propertyType: PropertyType;
   operationType: OperationType;
-  images: string; // URLs separadas por coma
+  images: string[]; // Array de URLs
   description: string;
   agencyLogo: string; // URL del logo
   agencyPlan: AgencyPlan;
 };
 
-const splitUrls = (s: string) =>
-  s
-    .split(",")
-    .map((x) => x.trim())
-    .filter(
-      (x) =>
-        x &&
-        (/^(https?:)?\/\//i.test(x) || x.startsWith("/uploads/"))
-    );
-
+// Función para subir logo (solo se usa para el logo de la agencia)
 async function uploadLocal(files: FileList): Promise<string[]> {
   const fd = new FormData();
   Array.from(files).forEach((f) => fd.append("files", f));
@@ -71,6 +64,9 @@ export default function EditarInmueblePage() {
   const [openDelete, setOpenDelete] = useState(false);
   const [role, setRole] = useState<string | null>(null);
 
+  // Estado para geolocalización
+  const [mapLocation, setMapLocation] = useState<{ lat: number; lng: number } | null>(null);
+
   const [f, setF] = useState<FormState>({
     title: "",
     location: "",
@@ -79,18 +75,17 @@ export default function EditarInmueblePage() {
     rooms: "0",
     propertyType: "depto",
     operationType: "venta",
-    images: "",
+    images: [],
     description: "",
     agencyLogo: "",
     agencyPlan: "free",
   });
 
-  const set = <K extends keyof FormState>(k: K, v: FormState[K]) =>
+  const set = <K extends keyof FormState>(k: K, v: FormState[K]) => {
     setF((s) => ({ ...s, [k]: v }));
-  const imageList = useMemo(
-    () => splitUrls(f.images).slice(0, 18),
-    [f.images]
-  );
+  };
+  
+  // Eliminamos imageList ya que images ahora es array
 
   // Leer rol del localStorage
   useEffect(() => {
@@ -127,12 +122,19 @@ export default function EditarInmueblePage() {
           rooms: String(it.rooms ?? "0"),
           propertyType: it.propertyType || "depto",
           operationType: it.operationType || "venta",
-          images:
-            (Array.isArray(it.images) ? it.images.join(", ") : "") || "",
+          images: Array.isArray(it.images) ? it.images : [],
           description: it.description || "",
           agencyLogo: it.agency?.logo || "",
           agencyPlan: it.agency?.plan || "free",
         });
+        
+        // Cargar coordenadas si existen
+        if (typeof it.lat === "number" && typeof it.lng === "number") {
+          setMapLocation({
+            lat: it.lat,
+            lng: it.lng,
+          });
+        }
       } catch {
         setMsg({ type: "err", text: "Error de red" });
       } finally {
@@ -154,7 +156,7 @@ export default function EditarInmueblePage() {
     const priceNum = Number(f.price);
     if (!priceNum || Number.isNaN(priceNum) || priceNum <= 0)
       errors.push("Precio inválido");
-    if (imageList.length === 0) errors.push("Al menos 1 imagen válida");
+    if (f.images.length === 0) errors.push("Al menos 1 imagen válida");
     if (errors.length) {
       setMsg({ type: "err", text: errors.join(" · ") });
       return;
@@ -162,6 +164,7 @@ export default function EditarInmueblePage() {
 
     setBusy(true);
     setMsg(null);
+    
     try {
       const res = await fetch(`/api/listings/${id}`, {
         method: "PUT",
@@ -174,14 +177,14 @@ export default function EditarInmueblePage() {
           rooms: Number(f.rooms || 0),
           propertyType: f.propertyType,
           operationType: f.operationType,
-          images: imageList,
+          images: f.images, // Ya es array
           description: f.description,
-          agency: f.agencyLogo
-            ? { logo: f.agencyLogo, plan: f.agencyPlan }
-            : { plan: f.agencyPlan },
+          lat: mapLocation?.lat,
+          lng: mapLocation?.lng,
         }),
       });
       const data = await res.json();
+      
       if (!res.ok) {
         setMsg({
           type: "err",
@@ -207,25 +210,6 @@ export default function EditarInmueblePage() {
     const data = await res.json();
     if (!res.ok) throw new Error(data?.error || "No se pudo eliminar");
     router.push("/inmuebles");
-  }
-
-  async function handleLocalPick(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-    setBusy(true);
-    try {
-      const urls = await uploadLocal(files);
-      if (urls.length) {
-        const current = splitUrls(f.images);
-        set("images", [...current, ...urls].join(", "));
-        setMsg({ type: "ok", text: `Subidas ${urls.length} imágenes` });
-      }
-    } catch (err: any) {
-      setMsg({ type: "err", text: err?.message || "No se pudo subir" });
-    } finally {
-      setBusy(false);
-      e.currentTarget.value = "";
-    }
   }
 
   async function handleLogoPick(e: React.ChangeEvent<HTMLInputElement>) {
@@ -386,71 +370,10 @@ export default function EditarInmueblePage() {
                 </FormControl>
               </Box>
 
-              <TextField
-                required
-                label="Imágenes (URLs separadas por coma)"
-                placeholder="https://... o /uploads/xxx.jpg"
-                value={f.images}
-                onChange={(e) => set("images", e.target.value)}
-                fullWidth
-              />
-
-              {/* Subida local de IMÁGENES */}
-              <Box sx={{ display: "flex", gap: 10, alignItems: "center" }}>
-                <input
-                  type="file"
-                  multiple
-                  accept="image/*"
-                  onChange={handleLocalPick}
-                />
-                <small style={{ opacity: 0.7 }}>
-                  Se guardan en <code>/public/uploads</code>
-                </small>
+              {/* COMPONENTE DE SUBIDA DE IMÁGENES */}
+              <Box>
+                <ImageUploader value={f.images} onChange={(urls) => set("images", urls)} maxImages={18} maxSizeMB={5} />
               </Box>
-
-              {/* PREVIEW */}
-              {imageList.length > 0 && (
-                <Box sx={{ display: "grid", gap: 1.5 }}>
-                  <div style={{ fontSize: 12, opacity: 0.75 }}>
-                    Previsualización
-                  </div>
-                  <div
-                    style={{
-                      display: "grid",
-                      gap: 8,
-                      gridTemplateColumns:
-                        "repeat(auto-fill, minmax(150px, 1fr))",
-                    }}
-                  >
-                    {imageList.map((src, i) => (
-                      <div
-                        key={i}
-                        style={{
-                          position: "relative",
-                          paddingTop: "65%",
-                          borderRadius: 10,
-                          overflow: "hidden",
-                          border:
-                            "1px solid rgba(255,255,255,.12)",
-                          background: "rgba(255,255,255,.03)",
-                        }}
-                      >
-                        <img
-                          src={src}
-                          alt={`img-${i}`}
-                          style={{
-                            position: "absolute",
-                            inset: 0,
-                            width: "100%",
-                            height: "100%",
-                            objectFit: "cover",
-                          }}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </Box>
-              )}
 
               <Divider flexItem sx={{ opacity: 0.2 }} />
 
@@ -462,6 +385,11 @@ export default function EditarInmueblePage() {
                 onChange={(e) => set("description", e.target.value)}
                 fullWidth
               />
+
+              {/* MAPA SELECTOR DE UBICACIÓN */}
+              <Box>
+                <MapPicker value={mapLocation} onChange={setMapLocation} height={350} />
+              </Box>
 
               <Box
                 sx={{

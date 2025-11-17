@@ -19,6 +19,8 @@ import DialogTitle from "@mui/material/DialogTitle";
 import DialogContent from "@mui/material/DialogContent";
 import DialogActions from "@mui/material/DialogActions";
 import PropertyCard from "@/components/cards/PropertyCard";
+import MapPicker from "@/components/maps/MapPicker";
+import ImageUploader from "@/components/upload/ImageUploader";
 
 type Role = "guest" | "user" | "agency" | "admin";
 type Plan = "free" | "pro" | "premium";
@@ -63,11 +65,22 @@ export default function PublicarPage() {
   const [price, setPrice] = useState<number | "">("");
   const [currency, setCurrency] = useState<"USD" | "ARS">("USD");
   const [propertyType, setPropertyType] = useState<PropertyType>("casa");
+  const [operationType, setOperationType] = useState<"venta" | "alquiler" | "temporario">("venta");
   const [rooms, setRooms] = useState<number | "">("");
   const [description, setDescription] = useState("");
-  const [images, setImages] = useState<string>("");
+  const [images, setImages] = useState<string[]>([]);
   const [plan, setPlan] = useState<Plan>("free"); // por defecto free
   const [openPreview, setOpenPreview] = useState(false);
+  
+  // Nuevos campos
+  const [m2Total, setM2Total] = useState<number | "">("");
+  const [m2Cubiertos, setM2Cubiertos] = useState<number | "">("");
+  const [bathrooms, setBathrooms] = useState<number | "">("");
+  const [bedrooms, setBedrooms] = useState<number | "">("");
+  const [garage, setGarage] = useState(false);
+  
+  // Geolocalización
+  const [mapLocation, setMapLocation] = useState<{ lat: number; lng: number; address?: string } | null>(null);
 
   useEffect(() => {
     const r = getRoleFromCookie();
@@ -114,12 +127,21 @@ export default function PublicarPage() {
         price: Number(price) || 0,
         currency,
         propertyType,
+        operationType,
         rooms: Number(rooms) || undefined,
         description,
-        images: images
-          .split("\n")
-          .map((l) => l.trim())
-          .filter(Boolean),
+        images: images, // Ya es un array de URLs
+        
+        // Nuevos campos
+        m2Total: Number(m2Total) || undefined,
+        m2Cubiertos: Number(m2Cubiertos) || undefined,
+        bathrooms: Number(bathrooms) || undefined,
+        bedrooms: Number(bedrooms) || undefined,
+        garage,
+        
+        // Geolocalización
+        lat: mapLocation?.lat,
+        lng: mapLocation?.lng,
       };
 
       // Solo el admin puede establecer el plan al crear
@@ -170,7 +192,14 @@ export default function PublicarPage() {
       setPrice("");
       setRooms("");
       setDescription("");
-      setImages("");
+      setImages([]);
+      setM2Total("");
+      setM2Cubiertos("");
+      setBathrooms("");
+      setBedrooms("");
+      setGarage(false);
+      setMapLocation(null);
+      setOperationType("venta");
       if (role === "admin") setPlan("free");
     } catch (err: any) {
       setSnackbar({ open: true, message: err?.message || "Error al publicar", severity: "error" });
@@ -328,6 +357,63 @@ export default function PublicarPage() {
           fullWidth
         />
 
+        <TextField
+          select
+          label="Tipo de operación"
+          value={operationType}
+          onChange={(e) => setOperationType(e.target.value as "venta" | "alquiler" | "temporario")}
+          fullWidth
+        >
+          <MenuItem value="venta">Venta</MenuItem>
+          <MenuItem value="alquiler">Alquiler</MenuItem>
+          <MenuItem value="temporario">Temporario</MenuItem>
+        </TextField>
+
+        <TextField
+          label="M² Totales"
+          type="number"
+          value={m2Total}
+          onChange={(e) => setM2Total(e.target.value === "" ? "" : Number(e.target.value))}
+          fullWidth
+          helperText="Superficie total del terreno"
+        />
+
+        <TextField
+          label="M² Cubiertos"
+          type="number"
+          value={m2Cubiertos}
+          onChange={(e) => setM2Cubiertos(e.target.value === "" ? "" : Number(e.target.value))}
+          fullWidth
+          helperText="Superficie construida"
+        />
+
+        <TextField
+          label="Dormitorios"
+          type="number"
+          value={bedrooms}
+          onChange={(e) => setBedrooms(e.target.value === "" ? "" : Number(e.target.value))}
+          fullWidth
+        />
+
+        <TextField
+          label="Baños"
+          type="number"
+          value={bathrooms}
+          onChange={(e) => setBathrooms(e.target.value === "" ? "" : Number(e.target.value))}
+          fullWidth
+        />
+
+        <TextField
+          select
+          label="Cochera"
+          value={garage ? "true" : "false"}
+          onChange={(e) => setGarage(e.target.value === "true")}
+          fullWidth
+        >
+          <MenuItem value="false">No</MenuItem>
+          <MenuItem value="true">Sí</MenuItem>
+        </TextField>
+
         {/* PLAN – SOLO ADMIN LO VE */}
         {role === "admin" && (
           <TextField
@@ -343,80 +429,10 @@ export default function PublicarPage() {
           </TextField>
         )}
 
-        <TextField
-          label="URLs de imágenes (una por línea)"
-          value={images}
-          onChange={(e) => setImages(e.target.value)}
-          fullWidth
-          multiline
-          minRows={4}
-          sx={{ gridColumn: "1 / -1" }}
-          helperText="Pegá las URLs de las imágenes, una por línea. Se mostrarán abajo."
-        />
-
-        {/* Previsualización de imágenes */}
-        {images.trim() && (
-          <Box sx={{ gridColumn: "1 / -1" }}>
-            <Typography variant="body2" sx={{ mb: 1, color: "text.secondary", fontWeight: 600 }}>
-              Vista previa de imágenes:
-            </Typography>
-            <Box sx={{ 
-              display: "grid", 
-              gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", 
-              gap: 1 
-            }}>
-              {images.split("\n").filter(url => url.trim()).map((url, idx) => (
-                <Box
-                  key={idx}
-                  sx={{
-                    position: "relative",
-                    aspectRatio: "16/10",
-                    borderRadius: 1,
-                    overflow: "hidden",
-                    border: "1px solid rgba(255,255,255,.12)",
-                    bgcolor: "rgba(255,255,255,.03)",
-                  }}
-                >
-                  <img
-                    src={url.trim()}
-                    alt={`Preview ${idx + 1}`}
-                    style={{
-                      width: "100%",
-                      height: "100%",
-                      objectFit: "cover",
-                    }}
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = "none";
-                      const parent = (e.target as HTMLElement).parentElement;
-                      if (parent) {
-                        parent.style.display = "flex";
-                        parent.style.alignItems = "center";
-                        parent.style.justifyContent = "center";
-                        parent.innerHTML = '<span style="color: #f44336; font-size: 12px;">❌ Error</span>';
-                      }
-                    }}
-                  />
-                  <Box
-                    sx={{
-                      position: "absolute",
-                      top: 4,
-                      right: 4,
-                      bgcolor: "rgba(0,0,0,.7)",
-                      color: "#fff",
-                      px: 0.8,
-                      py: 0.3,
-                      borderRadius: 0.5,
-                      fontSize: 11,
-                      fontWeight: 700,
-                    }}
-                  >
-                    {idx + 1}
-                  </Box>
-                </Box>
-              ))}
-            </Box>
-          </Box>
-        )}
+        {/* COMPONENTE DE SUBIDA DE IMÁGENES */}
+        <Box sx={{ gridColumn: "1 / -1" }}>
+          <ImageUploader value={images} onChange={setImages} maxImages={18} maxSizeMB={5} />
+        </Box>
 
         <TextField
           label="Descripción"
@@ -427,6 +443,11 @@ export default function PublicarPage() {
           minRows={4}
           sx={{ gridColumn: "1 / -1" }}
         />
+
+        {/* MAPA SELECTOR DE UBICACIÓN */}
+        <Box sx={{ gridColumn: "1 / -1" }}>
+          <MapPicker value={mapLocation} onChange={setMapLocation} height={350} />
+        </Box>
 
         <Box sx={{ gridColumn: "1 / -1", mt: 1, display: "flex", gap: 2, justifyContent: "flex-end" }}>
           <Button
@@ -462,9 +483,15 @@ export default function PublicarPage() {
               price: Number(price) || 0,
               currency: currency,
               location: location || "Ubicación",
-              images: images ? images.split("\n").filter(Boolean) : [],
+              images: images, // Ya es un array
               rooms: Number(rooms) || undefined,
               propertyType: propertyType,
+              operationType: operationType,
+              m2Total: Number(m2Total) || undefined,
+              m2Cubiertos: Number(m2Cubiertos) || undefined,
+              bathrooms: Number(bathrooms) || undefined,
+              bedrooms: Number(bedrooms) || undefined,
+              garage: garage,
               agency: role === "agency" 
                 ? { 
                     plan: agencyPlan, 
