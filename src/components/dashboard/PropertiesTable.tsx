@@ -258,7 +258,7 @@ export default function PropertiesTable() {
                     <Tooltip title="Editar">
                       <IconButton
                         size="small"
-                        onClick={() => router.push(`/api/listings/${property._id}/editar`)}
+                        onClick={() => router.push(`/inmuebles/${property._id}/editar`)}
                         sx={{ color: "#2196f3" }}
                       >
                         <EditRoundedIcon />
