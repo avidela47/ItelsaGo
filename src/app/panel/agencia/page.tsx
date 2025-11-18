@@ -98,10 +98,9 @@ export default function AgencyPanelPage() {
               variant="h3"
               sx={{
                 fontWeight: 800,
-                background: "linear-gradient(135deg, #00d0ff, #00ffe1)",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
+                color: "#ffffff",
                 mb: 1,
+                textShadow: "0 2px 10px rgba(0,208,255,0.3)",
               }}
             >
               Panel de Control
@@ -117,12 +116,14 @@ export default function AgencyPanelPage() {
             startIcon={<AddRoundedIcon />}
             onClick={() => router.push("/publicar")}
             sx={{
-              background: "linear-gradient(135deg, #00d0ff, #00ffe1)",
-              color: "#061016",
+              background: "linear-gradient(135deg, #2A6EBB, #1F5AAA)",
+              color: "#ffffff",
               fontWeight: 700,
               px: 4,
+              boxShadow: "0 4px 12px rgba(42, 110, 187, 0.4)",
               "&:hover": {
-                background: "linear-gradient(135deg, #00b8e6, #00e6ca)",
+                background: "linear-gradient(135deg, #1F5AAA, #184A99)",
+                boxShadow: "0 6px 16px rgba(42, 110, 187, 0.5)",
               },
             }}
           >
