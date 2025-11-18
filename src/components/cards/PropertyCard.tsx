@@ -47,15 +47,6 @@ export default function PropertyCard({ item }: { item: Item }) {
   // Normalizar sponsor -> pro para compatibilidad
   const plan = item.agency?.plan === "sponsor" ? "pro" : item.agency?.plan;
 
-  // Calcular si es NUEVO (menos de 7 días)
-  const isNew = (() => {
-    if (!item.createdAt) return false;
-    const created = new Date(item.createdAt);
-    const now = new Date();
-    const diffDays = (now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24);
-    return diffDays <= 7;
-  })();
-
   const waHref = (() => {
     const number = item?.agency?.whatsapp?.replace(/[^\d+]/g, "") || "";
     const base = number ? `https://wa.me/${number}` : `https://wa.me/`;
@@ -108,30 +99,6 @@ export default function PropertyCard({ item }: { item: Item }) {
         <Box sx={{ position: "absolute", top: 8, left: 8, zIndex: 10 }}>
           <FavButton id={item._id} />
         </Box>
-
-        {/* BADGE NUEVO → ARRIBA DERECHA (si aplica) */}
-        {isNew && (
-          <Box sx={{ position: "absolute", top: 8, right: plan ? 80 : 8 }}>
-            <Chip
-              label="NUEVO"
-              size="small"
-              sx={{
-                fontWeight: 800,
-                height: 20,
-                fontSize: 11,
-                px: 0.6,
-                background: "linear-gradient(135deg, #00d0ff, #00ffe1)",
-                color: "#061016",
-                border: "none",
-                animation: "pulse 2s ease-in-out infinite",
-                "@keyframes pulse": {
-                  "0%, 100%": { opacity: 1, transform: "scale(1)" },
-                  "50%": { opacity: 0.85, transform: "scale(1.05)" },
-                },
-              }}
-            />
-          </Box>
-        )}
 
         {/* BADGE PLAN → ARRIBA DERECHA */}
         {plan && (
