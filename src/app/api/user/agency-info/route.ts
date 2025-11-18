@@ -45,7 +45,9 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       ok: true,
+      name: (agency as any).name || "Mi Inmobiliaria",
       plan,
+      logo: (agency as any).logo || null,
       propertiesCount,
       limit,
       remaining: Math.max(0, limit - propertiesCount),

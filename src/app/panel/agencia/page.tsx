@@ -13,26 +13,45 @@ type UserData = {
   plan?: "free" | "pro" | "premium";
 };
 
+type AgencyData = {
+  name: string;
+  plan: "free" | "pro" | "premium";
+  logo?: string;
+};
+
 export default function AgencyPanelPage() {
   const router = useRouter();
   const [user, setUser] = useState<UserData | null>(null);
+  const [agency, setAgency] = useState<AgencyData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    // Verificar autenticación y rol
-    fetch("/api/user/me")
-      .then((res) => {
-        if (!res.ok) throw new Error("No autenticado");
-        return res.json();
+    // Verificar autenticación y obtener datos de agencia
+    Promise.all([
+      fetch("/api/user/me"),
+      fetch("/api/user/agency-info")
+    ])
+      .then(([userRes, agencyRes]) => {
+        if (!userRes.ok) throw new Error("No autenticado");
+        return Promise.all([userRes.json(), agencyRes.json()]);
       })
-      .then((data) => {
-        if (data.role !== "agency") {
+      .then(([userData, agencyData]) => {
+        if (userData.role !== "agency") {
           setError("Solo usuarios con rol de agencia pueden acceder al panel");
           setTimeout(() => router.push("/"), 2000);
           return;
         }
-        setUser(data);
+        setUser(userData);
+        
+        // Obtener datos de la agencia desde el endpoint
+        if (agencyData.ok) {
+          setAgency({
+            name: agencyData.name || "Mi Inmobiliaria",
+            plan: agencyData.plan || "free",
+            logo: agencyData.logo,
+          });
+        }
         setLoading(false);
       })
       .catch((err) => {
@@ -111,33 +130,47 @@ export default function AgencyPanelPage() {
           </Button>
         </Box>
 
-        {/* Plan Badge */}
-        {user?.plan && (
-          <Box
-            sx={{
-              display: "inline-block",
-              px: 3,
-              py: 1,
-              mb: 3,
-              borderRadius: 3,
-              background:
-                user.plan === "premium"
-                  ? "linear-gradient(135deg, #D9A441, #C89331)"
-                  : user.plan === "pro"
-                  ? "linear-gradient(135deg, #2A6EBB, #1F5AAA)"
-                  : "linear-gradient(135deg, #4CAF50, #3D9840)",
-              fontWeight: 700,
-              fontSize: 14,
-              textTransform: "uppercase",
-              letterSpacing: 1,
-            }}
-          >
-            Plan {user.plan}
-          </Box>
-        )}
+        {/* Logo y Plan Badge */}
+        <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 3 }}>
+          {agency?.logo && (
+            <Box
+              component="img"
+              src={agency.logo}
+              alt={agency.name}
+              sx={{
+                height: 60,
+                maxWidth: 150,
+                objectFit: "contain",
+                filter: "drop-shadow(0 2px 8px rgba(0,0,0,0.3))",
+              }}
+            />
+          )}
+          {agency?.plan && (
+            <Box
+              sx={{
+                display: "inline-block",
+                px: 3,
+                py: 1,
+                borderRadius: 3,
+                background:
+                  agency.plan === "premium"
+                    ? "linear-gradient(135deg, #D9A441, #C89331)"
+                    : agency.plan === "pro"
+                    ? "linear-gradient(135deg, #2A6EBB, #1F5AAA)"
+                    : "linear-gradient(135deg, #4CAF50, #3D9840)",
+                fontWeight: 700,
+                fontSize: 14,
+                textTransform: "uppercase",
+                letterSpacing: 1,
+              }}
+            >
+              Plan {agency.plan}
+            </Box>
+          )}
+        </Box>
 
         {/* Estadísticas */}
-        <DashboardStats plan={user?.plan || "free"} />
+        <DashboardStats plan={agency?.plan || "free"} />
 
         {/* Tabla de Propiedades */}
         <Box sx={{ mt: 4 }}>
