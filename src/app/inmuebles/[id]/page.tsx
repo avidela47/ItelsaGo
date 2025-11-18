@@ -520,11 +520,13 @@ export default function InmueblePage() {
             </Box>
 
             {/* Sección de contacto con la agencia */}
-            <AgencyContact
-              agency={item.agency}
-              propertyTitle={item.title}
-              onConsultaClick={() => setOpenContact(true)}
-            />
+            <Box sx={{ mt: 3 }}>
+              <AgencyContact
+                agency={item.agency}
+                propertyTitle={item.title}
+                onConsultaClick={() => setOpenContact(true)}
+              />
+            </Box>
 
             {/* Botones de admin */}
             {role === "admin" && (
