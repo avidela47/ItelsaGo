@@ -53,6 +53,8 @@ type Item = {
   agency?: { name?: string; logo?: string; plan?: Plan; phone?: string; whatsapp?: string };
   lat?: number;
   lng?: number;
+  _reasons?: string[]; // Razones de recomendación
+  _score?: number; // Score de recomendación
 };
 
 type ApiOne = { ok?: boolean; item?: Item; error?: string };
@@ -114,25 +116,24 @@ export default function InmueblePage() {
     return () => { ok = false; };
   }, [id]);
 
-  // Similares por tipo de propiedad
+  // Recomendaciones inteligentes
   useEffect(() => {
-    if (!item?.propertyType) return;
-    const type = item.propertyType;
+    if (!item?._id) return;
     let ok = true;
     (async () => {
       try {
         setSimErr(null);
-        const res = await fetch(`/api/listings?type=${encodeURIComponent(type)}`, { cache: "no-store" });
-        const data: ApiList = await res.json();
-        if (!res.ok) throw new Error(data?.error || "No se pudo cargar similares");
+        const res = await fetch(`/api/recommendations/${item._id}`, { cache: "no-store" });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data?.error || "No se pudo cargar recomendaciones");
         if (!ok) return;
-        setSimilar((data.items || []).filter(x => x._id !== item._id).slice(0, 4));
+        setSimilar(data.recommendations || []);
       } catch (e: any) {
-        setSimErr(e?.message || "Error cargando similares");
+        setSimErr(e?.message || "Error cargando recomendaciones");
       }
     })();
     return () => { ok = false; };
-  }, [item?._id, item?.propertyType]);
+  }, [item?._id]);
 
   // Meta tags dinámicos para SEO
   useEffect(() => {
@@ -686,25 +687,60 @@ export default function InmueblePage() {
         </Box>
       </Box>
 
-      {/* Similares */}
-      <Box sx={{ mt: 4 }}>
-        <Typography variant="h6" fontWeight={800} sx={{ mb: 1 }}>
-          Propiedades similares: {item.propertyType ? labelTipo(item.propertyType) : "Todas"}
-        </Typography>
+      {/* Recomendaciones inteligentes */}
+      <Box sx={{ mt: 5 }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}>
+          <Typography variant="h5" fontWeight={800}>
+            Te puede interesar
+          </Typography>
+          <Chip 
+            label="Recomendado para ti" 
+            size="small"
+            sx={{
+              background: "linear-gradient(135deg, #00d0ff, #0099cc)",
+              color: "#fff",
+              fontWeight: 700,
+            }}
+          />
+        </Box>
+        
         {simErr ? (
           <Typography sx={{ opacity: 0.7 }}>{simErr}</Typography>
         ) : similar.length === 0 ? (
-          <Typography sx={{ opacity: 0.7 }}>No encontramos similares.</Typography>
+          <Typography sx={{ opacity: 0.7 }}>No hay recomendaciones disponibles en este momento.</Typography>
         ) : (
           <Box
             sx={{
               display: "grid",
-              gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)", md: "repeat(3, 1fr)", lg: "repeat(4, 1fr)" },
+              gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)", md: "repeat(3, 1fr)" },
               gap: 3,
             }}
           >
             {similar.map((s) => (
-              <PropertyCard key={s._id} item={s} />
+              <Box key={s._id} sx={{ position: "relative" }}>
+                {/* Badge de razón principal */}
+                {s._reasons && s._reasons.length > 0 && (
+                  <Box
+                    sx={{
+                      position: "absolute",
+                      top: 8,
+                      left: 8,
+                      zIndex: 2,
+                      bgcolor: "rgba(0, 208, 255, 0.95)",
+                      color: "#fff",
+                      px: 1.5,
+                      py: 0.5,
+                      borderRadius: 2,
+                      fontSize: "0.75rem",
+                      fontWeight: 700,
+                      boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
+                    }}
+                  >
+                    {s._reasons[0]}
+                  </Box>
+                )}
+                <PropertyCard item={s} />
+              </Box>
             ))}
           </Box>
         )}
