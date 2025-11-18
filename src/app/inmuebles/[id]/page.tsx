@@ -22,6 +22,7 @@ import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EmailIcon from "@mui/icons-material/Email";
 import PropertyCard from "@/components/cards/PropertyCard";
+import AgencyContact from "@/components/AgencyContact";
 
 // Importar MapView dinámicamente para evitar SSR
 const MapView = dynamic(() => import("@/components/maps/MapView"), {
@@ -518,32 +519,12 @@ export default function InmueblePage() {
               {item.garage && <Chip label="Cochera" size="small" />}
             </Box>
 
-            <Box sx={{ display: "flex", gap: 1.2, mt: 2 }}>
-              <Button
-                fullWidth
-                variant="contained"
-                startIcon={<WhatsAppIcon />}
-                href={waLink()}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                WhatsApp
-              </Button>
-              <Button fullWidth variant="outlined" startIcon={<PhoneIcon />} href={telLink()} disabled={!telLink()}>
-                Llamar
-              </Button>
-            </Box>
-
-            {/* Botón de consulta por email */}
-            <Button
-              fullWidth
-              variant="outlined"
-              startIcon={<EmailIcon />}
-              onClick={() => setOpenContact(true)}
-              sx={{ mt: 1.2 }}
-            >
-              Consultar por Email
-            </Button>
+            {/* Sección de contacto con la agencia */}
+            <AgencyContact
+              agency={item.agency}
+              propertyTitle={item.title}
+              onConsultaClick={() => setOpenContact(true)}
+            />
 
             {/* Botones de admin */}
             {role === "admin" && (
