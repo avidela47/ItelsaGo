@@ -133,7 +133,8 @@ export default function InmueblePage() {
     const description = item.description 
       ? item.description.slice(0, 160) 
       : `${item.propertyType || "Propiedad"} en ${item.operationType || "venta"} en ${item.location}. ${item.price ? `Precio: ${item.currency} ${new Intl.NumberFormat("es-AR").format(item.price)}` : ""}`;
-    const imageUrl = item.images?.[0] || "/logo-itelsa-go.svg";
+    const imageUrl = item.images?.[0] ? `${window.location.origin}${item.images[0]}` : `${window.location.origin}/logo-itelsa-go.svg`;
+    const url = window.location.href;
 
     document.title = title;
     
@@ -146,13 +147,24 @@ export default function InmueblePage() {
     }
     metaDesc.setAttribute('content', description);
 
+    // Canonical URL
+    let canonical = document.querySelector('link[rel="canonical"]') as HTMLLinkElement;
+    if (!canonical) {
+      canonical = document.createElement('link');
+      canonical.setAttribute('rel', 'canonical');
+      document.head.appendChild(canonical);
+    }
+    canonical.href = url;
+
     // Open Graph tags
     const ogTags = {
       'og:title': title,
       'og:description': description,
       'og:image': imageUrl,
+      'og:url': url,
       'og:type': 'website',
-      'og:locale': 'es_AR'
+      'og:locale': 'es_AR',
+      'og:site_name': 'ITELSA Go'
     };
 
     Object.entries(ogTags).forEach(([property, content]) => {
@@ -170,7 +182,8 @@ export default function InmueblePage() {
       'twitter:card': 'summary_large_image',
       'twitter:title': title,
       'twitter:description': description,
-      'twitter:image': imageUrl
+      'twitter:image': imageUrl,
+      'twitter:site': '@ItelsaGo'
     };
 
     Object.entries(twitterTags).forEach(([name, content]) => {
@@ -182,6 +195,44 @@ export default function InmueblePage() {
       }
       metaTag.setAttribute('content', content);
     });
+
+    // JSON-LD Structured Data (Schema.org)
+    const structuredData = {
+      "@context": "https://schema.org",
+      "@type": "RealEstateListing",
+      "name": item.title,
+      "description": description,
+      "url": url,
+      "image": item.images?.map(img => `${window.location.origin}${img}`) || [imageUrl],
+      "offers": {
+        "@type": "Offer",
+        "price": item.price,
+        "priceCurrency": item.currency,
+        "availability": "https://schema.org/InStock",
+        "seller": {
+          "@type": "Organization",
+          "name": item.agency?.name || "ITELSA Go",
+          ...(item.agency?.logo && { "logo": `${window.location.origin}${item.agency.logo}` })
+        }
+      },
+      "address": {
+        "@type": "PostalAddress",
+        "addressLocality": item.location,
+        "addressCountry": "AR"
+      },
+      ...(item.m2Total && { "floorSize": { "@type": "QuantitativeValue", "value": item.m2Total, "unitCode": "MTK" } }),
+      ...(item.bedrooms && { "numberOfBedrooms": item.bedrooms }),
+      ...(item.bathrooms && { "numberOfBathroomsTotal": item.bathrooms }),
+      ...(item.rooms && { "numberOfRooms": item.rooms })
+    };
+
+    let scriptTag = document.querySelector('script[type="application/ld+json"]');
+    if (!scriptTag) {
+      scriptTag = document.createElement('script');
+      scriptTag.setAttribute('type', 'application/ld+json');
+      document.head.appendChild(scriptTag);
+    }
+    scriptTag.textContent = JSON.stringify(structuredData);
   }, [item]);
 
   // Imágenes seguras
