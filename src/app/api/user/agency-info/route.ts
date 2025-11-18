@@ -36,9 +36,9 @@ export async function GET(req: NextRequest) {
 
     // Definir límites
     const limits: Record<string, number> = {
-      free: 3,
-      pro: 10,
-      premium: 999999,
+      free: 5,
+      pro: 25,
+      premium: 50,
     };
 
     const limit = limits[plan] || 3;

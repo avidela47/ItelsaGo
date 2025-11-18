@@ -114,17 +114,17 @@ export async function POST(req: NextRequest) {
           
           // Límites por plan
           const limits: Record<string, number> = {
-            free: 3,
-            pro: 10,
-            premium: 999999, // Ilimitado
+            free: 5,
+            pro: 25,
+            premium: 50,
           };
           
-          const limit = limits[plan] || 3;
+          const limit = limits[plan] || 5;
           
           if (existingCount >= limit) {
             return NextResponse.json(
               { 
-                error: `Límite alcanzado. Plan ${plan.toUpperCase()}: máximo ${limit === 999999 ? 'ilimitadas' : limit} propiedades. Contactá al administrador para cambiar tu plan.` 
+                error: `Límite alcanzado. Plan ${plan.toUpperCase()}: máximo ${limit} propiedades. Contactá al administrador para cambiar tu plan.` 
               },
               { status: 403 }
             );

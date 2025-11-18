@@ -19,8 +19,8 @@ type StatsData = {
 
 const PLAN_LIMITS = {
   free: 5,
-  pro: 20,
-  premium: 100,
+  pro: 25,
+  premium: 50,
 };
 
 const PLAN_COLORS = {
