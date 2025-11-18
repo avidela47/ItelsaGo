@@ -23,6 +23,7 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import EmailIcon from "@mui/icons-material/Email";
 import PropertyCard from "@/components/cards/PropertyCard";
 import AgencyContact from "@/components/AgencyContact";
+import ImageLightbox from "@/components/ImageLightbox";
 
 // Importar MapView dinámicamente para evitar SSR
 const MapView = dynamic(() => import("@/components/maps/MapView"), {
@@ -69,6 +70,9 @@ export default function InmueblePage() {
   const [idx, setIdx] = useState(0);
   const [similar, setSimilar] = useState<Item[]>([]);
   const [simErr, setSimErr] = useState<string | null>(null);
+
+  // Estado del lightbox
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   // Estado del formulario de contacto
   const [openContact, setOpenContact] = useState(false);
@@ -428,7 +432,13 @@ export default function InmueblePage() {
               overflow: "hidden",
               border: "1px solid rgba(255,255,255,.10)",
               background: "rgba(255,255,255,.03)",
+              cursor: "pointer",
+              transition: "transform 0.2s ease",
+              "&:hover": {
+                transform: "scale(1.01)",
+              },
             }}
+            onClick={() => setLightboxOpen(true)}
           >
             <img
               src={imgs[safeIdx]}
@@ -498,7 +508,10 @@ export default function InmueblePage() {
               {imgs.map((src, i) => (
                 <button
                   key={i}
-                  onClick={() => setIdx(i)}
+                  onClick={() => {
+                    setIdx(i);
+                    setLightboxOpen(true);
+                  }}
                   style={{
                     position: "relative",
                     paddingTop: "62%",
@@ -770,6 +783,15 @@ export default function InmueblePage() {
           )}
         </DialogActions>
       </Dialog>
+
+      {/* Lightbox de imágenes */}
+      {lightboxOpen && (
+        <ImageLightbox
+          images={imgs}
+          initialIndex={safeIdx}
+          onClose={() => setLightboxOpen(false)}
+        />
+      )}
     </main>
   );
 }
