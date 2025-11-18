@@ -6,6 +6,7 @@ import HomeWorkIcon from "@mui/icons-material/HomeWork";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import StarIcon from "@mui/icons-material/Star";
 import TrendingUpIcon from "@mui/icons-material/TrendingUp";
+import EmailIcon from "@mui/icons-material/Email";
 
 type Plan = "free" | "pro" | "premium";
 
@@ -13,6 +14,8 @@ type StatsData = {
   totalProperties: number;
   totalViews: number;
   featuredProperties: number;
+  totalContacts: number;
+  pendingContacts: number;
   limit: number;
   percentage: number;
 };
@@ -195,32 +198,47 @@ export default function DashboardStats({ plan }: Props) {
         </CardContent>
       </Card>
 
-      {/* Tasa de Respuesta */}
+      {/* Contactos Recibidos */}
       <Card
         sx={{
-          background: "linear-gradient(135deg, rgba(76, 175, 80, 0.08), rgba(129, 199, 132, 0.05))",
-          border: "1px solid rgba(76, 175, 80, 0.4)",
+          background: "linear-gradient(135deg, rgba(156, 39, 176, 0.08), rgba(186, 104, 200, 0.05))",
+          border: "1px solid rgba(156, 39, 176, 0.4)",
           transition: "transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s ease",
           "&:hover": {
             transform: "translateY(-4px)",
-            boxShadow: "0 8px 16px rgba(76, 175, 80, 0.2)",
+            boxShadow: "0 8px 16px rgba(156, 39, 176, 0.2)",
           },
         }}
       >
         <CardContent>
           <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
-            <TrendingUpIcon sx={{ fontSize: 28, color: "#4caf50" }} />
+            <EmailIcon sx={{ fontSize: 28, color: "#9c27b0" }} />
             <Typography variant="body2" sx={{ opacity: 0.85, fontWeight: 600 }}>
-              Rendimiento
+              Contactos
             </Typography>
           </Box>
-          <Typography variant="h3" fontWeight={900} sx={{ color: "#4caf50" }}>
-            {stats.totalProperties > 0
-              ? Math.round((stats.totalViews / stats.totalProperties) * 10) / 10
-              : 0}
+          <Typography variant="h3" fontWeight={900} sx={{ color: "#9c27b0" }}>
+            {stats.totalContacts}
           </Typography>
           <Typography variant="caption" sx={{ opacity: 0.7, mt: 1, display: "block" }}>
-            Vistas promedio por propiedad
+            {stats.pendingContacts > 0 && (
+              <Box
+                component="span"
+                sx={{
+                  display: "inline-block",
+                  px: 1,
+                  py: 0.5,
+                  borderRadius: 1,
+                  background: "rgba(255, 152, 0, 0.15)",
+                  color: "#ff9800",
+                  fontWeight: 600,
+                  mr: 1,
+                }}
+              >
+                {stats.pendingContacts} pendiente{stats.pendingContacts !== 1 ? "s" : ""}
+              </Box>
+            )}
+            Consultas recibidas
           </Typography>
         </CardContent>
       </Card>

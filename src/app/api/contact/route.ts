@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
 import { dbConnect } from "@/lib/mongo";
 import Listing from "@/models/Listing";
+import Contact from "@/models/Contact";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -47,6 +48,18 @@ export async function POST(req: NextRequest) {
     const agencyEmail = listing.agency?.email || "arielvidela37@gmail.com"; // Email por defecto para testing
     const agencyName = listing.agency?.name || "Inmobiliaria";
 
+    // Registrar el contacto en la base de datos
+    const contact = await Contact.create({
+      listing: listingId,
+      agency: listing.agency?._id,
+      name,
+      email,
+      phone,
+      message,
+      status: "pending",
+    });
+
+    console.log("💾 Contacto registrado en BD:", contact._id);
     console.log("📬 Enviando email a:", agencyEmail);
 
     // Construir HTML del email
