@@ -96,6 +96,11 @@ export default function InmueblePage() {
         if (!ok) return;
         setItem(data.item);
         setIdx(0);
+
+        // Incrementar contador de vistas
+        fetch(`/api/listings/${id}/view`, { method: "POST" }).catch(err => 
+          console.error("Error incrementando vistas:", err)
+        );
       } catch (e: any) {
         setErr(e?.message || "Error de red");
       } finally {
