@@ -603,8 +603,13 @@ export default function InmueblePage() {
                     }}
                   />
                 )}
-                {item.agency?.phone && (
-                  <Typography sx={{ opacity: 0.75, fontSize: 13 }}>{item.agency.phone}</Typography>
+                {item.agency?.plan && (
+                  <Typography sx={{ opacity: 0.75, fontSize: 13, fontWeight: 600 }}>
+                    {item.agency.plan === "free" && "+5 ventas"}
+                    {item.agency.plan === "pro" && "+25 ventas"}
+                    {item.agency.plan === "premium" && "+100 ventas"}
+                    {item.agency.plan === "sponsor" && "+25 ventas"}
+                  </Typography>
                 )}
               </Box>
             </Box>
