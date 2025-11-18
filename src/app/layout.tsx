@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import ThemeRegistry from "@/components/ThemeRegistry";
+import WhatsAppButton from "@/components/WhatsAppButton";
 
 export const metadata: Metadata = {
   title: "ITELSA Go",
@@ -25,6 +26,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           {/* 🔒 ÚNICO navbar montado */}
           <Navbar />
           <div style={{ flex: 1 }}>{children}</div>
+          {/* 💬 Botón flotante de WhatsApp */}
+          <WhatsAppButton />
         </ThemeRegistry>
       </body>
     </html>
