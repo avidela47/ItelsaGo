@@ -62,6 +62,12 @@ type ApiList = { ok?: boolean; items?: Item[]; error?: string };
 
 export default function InmueblePage() {
   const { id } = useParams<{ id: string }>();
+  // Tracking de visitas (debe ir después de declarar 'id')
+  useEffect(() => {
+    if (!id) return;
+    fetch(`/api/listings/${id}/track-visit`, { method: "POST" })
+      .catch(err => console.error("Error registrando visita:", err));
+  }, [id]);
   const router = useRouter();
 
   const [loading, setLoading] = useState(true);

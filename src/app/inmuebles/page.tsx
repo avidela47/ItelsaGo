@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
+import Button from "@mui/material/Button";
 
 import FiltersBar, {
   FilterState,
@@ -33,6 +34,28 @@ type Item = {
 };
 
 export default function InmueblesPage() {
+  const [alertMsg, setAlertMsg] = useState<string | null>(null);
+  const [savingAlert, setSavingAlert] = useState(false);
+
+  // Guardar búsqueda como alerta
+  const handleSaveAlert = async () => {
+    setSavingAlert(true);
+    setAlertMsg(null);
+    try {
+      const res = await fetch("/api/user/alerts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ criteria: filters })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || "No se pudo guardar la alerta");
+      setAlertMsg("¡Búsqueda guardada como alerta!");
+    } catch (err: any) {
+      setAlertMsg(err?.message || "Error al guardar alerta");
+    } finally {
+      setSavingAlert(false);
+    }
+  };
   const [loading, setLoading] = useState(true);
   const [itemsAll, setItemsAll] = useState<Item[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -178,12 +201,30 @@ export default function InmueblesPage() {
     >
 
       {/* FILTROS */}
+
       <FiltersBar
         value={filters}
         onChange={setFilters}
         items={itemsAll}
         onPlanesClick={() => setShowPlanes(true)}
       />
+
+      {/* BOTÓN GUARDAR BÚSQUEDA COMO ALERTA */}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2, mt: 1 }}>
+        <Button
+          variant="contained"
+          color="primary"
+          onClick={handleSaveAlert}
+          disabled={savingAlert}
+        >
+          {savingAlert ? "Guardando..." : "Guardar búsqueda como alerta"}
+        </Button>
+        {alertMsg && (
+          <Typography sx={{ color: alertMsg.startsWith('¡') ? 'success.main' : 'error.main', fontWeight: 500 }}>
+            {alertMsg}
+          </Typography>
+        )}
+      </Box>
 
       {/* CONTADOR DE RESULTADOS */}
       {!loading && !error && (

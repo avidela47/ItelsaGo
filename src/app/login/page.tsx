@@ -60,6 +60,8 @@ export default function LoginPage() {
       // Guardar el rol en localStorage
       if (data.role) {
         localStorage.setItem("role", data.role);
+        // Disparar evento personalizado para que Navbar escuche el cambio en la misma pestaña
+        window.dispatchEvent(new Event("role-changed"));
       }
 
       setMsg({ type: "ok", text: "Sesión iniciada" });

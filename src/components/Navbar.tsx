@@ -9,29 +9,16 @@ export default function Navbar() {
 
   useEffect(() => {
     const checkRole = () => {
-      // Primero intentar leer de localStorage
-      let r = window.localStorage.getItem("role");
-      
-      // Si no hay en localStorage, intentar leer de cookies
-      if (!r) {
-        const cookieRole = document.cookie.match(/(?:^|;)\s*role=([^;]+)/)?.[1];
-        if (cookieRole) {
-          r = cookieRole;
-          // Sincronizar con localStorage
-          localStorage.setItem("role", cookieRole);
-        }
-      }
-      
+      // Leer solo de localStorage para el estado de login
+      const r = window.localStorage.getItem("role");
       setRole(r);
     };
-    
     checkRole();
-    
-    // Escuchar cambios en localStorage
     window.addEventListener("storage", checkRole);
-    
+    window.addEventListener("role-changed", checkRole);
     return () => {
       window.removeEventListener("storage", checkRole);
+      window.removeEventListener("role-changed", checkRole);
     };
   }, []);
 
