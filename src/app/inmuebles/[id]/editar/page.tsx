@@ -91,8 +91,8 @@ export default function EditarInmueblePage() {
   useEffect(() => {
     const r = window.localStorage.getItem("role");
     setRole(r);
-    // Si no es admin, redirigir
-    if (r !== "admin") {
+    // Permitir admin y agency
+    if (r !== "admin" && r !== "agency") {
       router.push("/inmuebles");
     }
   }, [router]);

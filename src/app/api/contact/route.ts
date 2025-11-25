@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Resend } from "resend";
+import { sendEmail } from "@/lib/sendAlertEmails";
 import { dbConnect } from "@/lib/mongo";
 import Listing from "@/models/Listing";
+import Contact from "@/models/Contact";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+
 
 export async function POST(req: NextRequest) {
   try {
@@ -47,6 +48,18 @@ export async function POST(req: NextRequest) {
     const agencyEmail = listing.agency?.email || "arielvidela37@gmail.com"; // Email por defecto para testing
     const agencyName = listing.agency?.name || "Inmobiliaria";
 
+    // Registrar el contacto en la base de datos
+    const contact = await Contact.create({
+      listing: listingId,
+      agency: listing.agency?._id,
+      name,
+      email,
+      phone,
+      message,
+      status: "pending",
+    });
+
+    console.log("💾 Contacto registrado en BD:", contact._id);
     console.log("📬 Enviando email a:", agencyEmail);
 
     // Construir HTML del email
@@ -117,29 +130,17 @@ export async function POST(req: NextRequest) {
       </html>
     `;
 
-    // Enviar email a la inmobiliaria
-    const { data, error } = await resend.emails.send({
-      from: "ITELSA Go <onboarding@resend.dev>", // En producción usar tu dominio verificado
-      to: [agencyEmail],
-      replyTo: email, // Para que la inmobiliaria responda directo al interesado
+
+    // Enviar email a la inmobiliaria usando SendGrid
+    await sendEmail({
+      to: agencyEmail,
       subject: `Nueva consulta: ${listing.title}`,
       html: htmlContent,
     });
 
-    if (error) {
-      console.error("❌ Error de Resend:", error);
-      return NextResponse.json(
-        { error: `Error al enviar el email: ${error.message || JSON.stringify(error)}` },
-        { status: 500 }
-      );
-    }
-
-    console.log("✅ Email enviado exitosamente. ID:", data?.id);
-
     return NextResponse.json({
       ok: true,
-      message: "Consulta enviada exitosamente",
-      emailId: data?.id,
+      message: "Consulta enviada exitosamente"
     });
 
   } catch (error: any) {

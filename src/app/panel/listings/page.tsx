@@ -22,6 +22,7 @@ import EditRoundedIcon from "@mui/icons-material/EditRounded";
 import BlockIcon from "@mui/icons-material/Block";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import BusinessIcon from "@mui/icons-material/Business";
+import StarIcon from "@mui/icons-material/Star";
 import CircularProgress from "@mui/material/CircularProgress";
 import ConfirmDeleteDialog from "@/components/cards/ConfirmDeleteDialog";
 
@@ -33,14 +34,19 @@ type Item = {
   location: string;
   rooms?: number;
   propertyType?: "depto" | "casa" | "lote" | "local";
-  agency?: { 
+  agency?: {
     _id?: string;
     name?: string;
-    logo?: string; 
-    plan?: "premium" | "pro" | "free";
-  };
+    logo?: string;
+    plan?: "premium" | "pro" | "free" | string;
+  } | null;
   status?: "active" | "suspended";
   createdAt?: string;
+  views?: number;
+  featured?: boolean;
+  favorites?: number;
+  contacts?: number;
+  warningAgency?: string;
 };
 
 export default function AdminListingsPage() {
@@ -54,9 +60,9 @@ export default function AdminListingsPage() {
   async function load() {
     setLoading(true);
     try {
-      const res = await fetch("/api/listings?showAll=true", { cache: "no-store" });
+      const res = await fetch("/api/admin/listings-metrics", { cache: "no-store" });
       const data = await res.json();
-      setItems(data?.items || []);
+      setItems(data?.listings || []);
     } finally {
       setLoading(false);
     }
@@ -93,21 +99,45 @@ export default function AdminListingsPage() {
     }
   }
 
-  async function toggleStatus(id: string) {
+  async function toggleStatus(id: string, currentStatus: string | undefined) {
     try {
-      const res = await fetch(`/api/listings/${id}/toggle-status`, { method: "PATCH" });
+      const newStatus = currentStatus === "active" ? "suspended" : "active";
+      const res = await fetch(`/api/listings/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus })
+      });
       const data = await res.json();
-      
-      if (res.ok) {
-        // Actualizar el item en el estado
-        setItems(prev => prev.map(item => 
-          item._id === id ? { ...item, status: data.status } : item
+      if (res.ok && data.ok) {
+        setItems(prev => prev.map(item =>
+          item._id === id ? { ...item, status: newStatus } : item
         ));
       } else {
         alert(data.error || "Error al cambiar estado");
       }
     } catch (err) {
       alert("Error al cambiar estado");
+    }
+  }
+
+  async function toggleFeatured(id: string, currentFeatured: boolean | undefined) {
+    try {
+      const newFeatured = !currentFeatured;
+      const res = await fetch(`/api/listings/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ featured: newFeatured })
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        setItems(prev => prev.map(item =>
+          item._id === id ? { ...item, featured: newFeatured } : item
+        ));
+      } else {
+        alert(data.error || "Error al cambiar destacado");
+      }
+    } catch (err) {
+      alert("Error al cambiar destacado");
     }
   }
 
@@ -184,6 +214,10 @@ export default function AdminListingsPage() {
               <TableCell>Ubicación</TableCell>
               <TableCell>Precio</TableCell>
               <TableCell>Plan</TableCell>
+              <TableCell>Vistas</TableCell>
+              <TableCell>Favoritos</TableCell>
+              <TableCell>Consultas</TableCell>
+              <TableCell>Destacado</TableCell>
               <TableCell>Estado</TableCell>
               <TableCell align="right">Acciones</TableCell>
             </TableRow>
@@ -205,16 +239,39 @@ export default function AdminListingsPage() {
                 <TableCell>{it.location}</TableCell>
                 <TableCell>{it.currency} {Intl.NumberFormat("es-AR").format(it.price || 0)}</TableCell>
                 <TableCell>
-                  <Chip
+                  {it.warningAgency ? (
+                    <Chip
+                      size="small"
+                      label={it.agency?.plan ? it.agency.plan.toUpperCase() : "SIN PLAN"}
+                      color="warning"
+                      sx={{ fontWeight: 700 }}
+                      title={it.warningAgency}
+                    />
+                  ) : (
+                    <Chip
+                      size="small"
+                      label={(it.agency?.plan || "FREE").toUpperCase()}
+                      sx={{
+                        fontWeight: 700,
+                        background: it.agency?.plan === "premium" ? "#D9A441" : 
+                                   it.agency?.plan === "pro" ? "#2A6EBB" : "#4CAF50",
+                        color: "#fff"
+                      }}
+                    />
+                  )}
+                </TableCell>
+                <TableCell>{it.views ?? 0}</TableCell>
+                <TableCell>{it.favorites ?? 0}</TableCell>
+                <TableCell>{it.contacts ?? 0}</TableCell>
+                <TableCell>
+                  <IconButton
                     size="small"
-                    label={(it.agency?.plan || "free").toUpperCase()}
-                    sx={{
-                      fontWeight: 700,
-                      background: it.agency?.plan === "premium" ? "#D9A441" : 
-                                 it.agency?.plan === "pro" ? "#2A6EBB" : "#4CAF50",
-                      color: "#fff"
-                    }}
-                  />
+                    color={it.featured ? "warning" : "secondary"}
+                    onClick={() => toggleFeatured(it._id, it.featured)}
+                    title={it.featured ? "Quitar destacado" : "Destacar"}
+                  >
+                    <StarIcon sx={it.featured ? { color: '#FFD600' } : {}} />
+                  </IconButton>
                 </TableCell>
                 <TableCell>
                   <Chip
@@ -227,7 +284,7 @@ export default function AdminListingsPage() {
                   <IconButton
                     size="small"
                     color={it.status === "suspended" ? "success" : "warning"}
-                    onClick={() => toggleStatus(it._id)}
+                    onClick={() => toggleStatus(it._id, it.status)}
                     title={it.status === "suspended" ? "Activar" : "Suspender"}
                   >
                     {it.status === "suspended" ? <CheckCircleIcon /> : <BlockIcon />}

@@ -3,6 +3,7 @@
 import { Box, Typography, Button, Card, Chip } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import { useEffect } from "react";
+import { PLAN_PRICES } from "@/lib/planPrices";
 
 type Props = {
   onClose: () => void;
@@ -20,7 +21,7 @@ export default function PlanesSection({ onClose }: Props) {
     {
       id: "free",
       name: "FREE",
-      price: 0,
+      price: PLAN_PRICES.free,
       icon: "🧱",
       color: "#4CAF50",
       colorSecondary: "#A9E5B0",
@@ -29,7 +30,7 @@ export default function PlanesSection({ onClose }: Props) {
       longDesc: "El punto de partida perfecto para comenzar a mostrar tus inmuebles sin inversión inicial. Accedé a un paquete estable de publicaciones y empezá a posicionar tu marca inmobiliaria dentro de ITELSA Go. Ideal para agencias pequeñas o para quienes recién ingresan al sector digital.",
       tagline: "Ideal para empezar",
       features: [
-        { text: "10 publicaciones", included: true },
+        { text: "5 publicaciones", included: true },
         { text: "5 fotos por inmueble", included: true },
         { text: "Panel básico", included: true },
         { text: "Destacados", included: false },
@@ -40,7 +41,7 @@ export default function PlanesSection({ onClose }: Props) {
     {
       id: "pro",
       name: "PRO",
-      price: 100,
+      price: PLAN_PRICES.pro,
       icon: "🏠",
       color: "#2A6EBB",
       colorSecondary: "#70A6FF",
@@ -50,7 +51,7 @@ export default function PlanesSection({ onClose }: Props) {
       tagline: "La mejor relación precio/calidad",
       popular: true,
       features: [
-        { text: "50 publicaciones", included: true },
+        { text: "25 publicaciones", included: true },
         { text: "20 fotos por inmueble", included: true },
         { text: "2 destacados por semana", included: true },
         { text: "Estadísticas de visitas", included: true },
@@ -60,7 +61,7 @@ export default function PlanesSection({ onClose }: Props) {
     {
       id: "premium",
       name: "PREMIUM",
-      price: 500,
+      price: PLAN_PRICES.premium,
       icon: "🏢",
       color: "#D9A441",
       colorSecondary: "#F2DFA5",
@@ -69,7 +70,7 @@ export default function PlanesSection({ onClose }: Props) {
       longDesc: "El nivel más alto de ITELSA Go. Tu inmobiliaria obtiene prioridad en listados, máxima visibilidad, herramientas avanzadas de performance y soporte preferencial. Diseñado para grandes inmobiliarias o agencias que necesitan dominar su zona.",
       tagline: "Dominio total del mercado",
       features: [
-        { text: "Publicaciones ilimitadas", included: true },
+        { text: "50 publicaciones", included: true },
         { text: "Fotos ilimitadas", included: true },
         { text: "6 destacados por semana", included: true },
         { text: "Estadísticas avanzadas", included: true },

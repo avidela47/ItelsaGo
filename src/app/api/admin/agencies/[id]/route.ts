@@ -12,20 +12,26 @@ export async function PATCH(
     const { id } = params;
     const body = await req.json();
     
-    const { name, email, phone, whatsapp, plan, logo } = body;
-    
+
+  const { name, email, phone, whatsapp, plan, logo, status } = body;
+  const updateFields: any = {};
+  if (name !== undefined) updateFields.name = name;
+  if (email !== undefined) updateFields.email = email;
+  if (phone !== undefined) updateFields.phone = phone;
+  if (whatsapp !== undefined) updateFields.whatsapp = whatsapp;
+  if (plan !== undefined) updateFields.plan = plan;
+  if (logo !== undefined) updateFields.logo = logo;
+  if (status !== undefined) updateFields.status = status;
+
+  console.log("PATCH /api/admin/agencies/[id] body:", body);
+  console.log("PATCH /api/admin/agencies/[id] updateFields:", updateFields);
+
     const agency = await Agency.findByIdAndUpdate(
       id,
-      {
-        name,
-        email,
-        phone,
-        whatsapp,
-        plan,
-        logo,
-      },
+      updateFields,
       { new: true }
     );
+    console.log("PATCH /api/admin/agencies/[id] result:", agency);
     
     if (!agency) {
       return NextResponse.json(

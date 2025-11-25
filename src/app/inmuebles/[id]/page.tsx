@@ -1,6 +1,14 @@
+
 "use client";
 
+
 import { useEffect, useMemo, useState } from "react";
+import Tooltip from "@mui/material/Tooltip";
+import FavoriteIcon from "@mui/icons-material/Favorite";
+import VisibilityIcon from "@mui/icons-material/Visibility";
+import ContactMailIcon from "@mui/icons-material/ContactMail";
+import TrendingUpIcon from "@mui/icons-material/TrendingUp";
+import StarIcon from "@mui/icons-material/Star";
 import { useParams, useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import Box from "@mui/material/Box";
@@ -22,6 +30,8 @@ import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EmailIcon from "@mui/icons-material/Email";
 import PropertyCard from "@/components/cards/PropertyCard";
+import AgencyContact from "@/components/AgencyContact";
+import ImageLightbox from "@/components/ImageLightbox";
 
 // Importar MapView dinámicamente para evitar SSR
 const MapView = dynamic(() => import("@/components/maps/MapView"), {
@@ -51,6 +61,8 @@ type Item = {
   agency?: { name?: string; logo?: string; plan?: Plan; phone?: string; whatsapp?: string };
   lat?: number;
   lng?: number;
+  _reasons?: string[]; // Razones de recomendación
+  _score?: number; // Score de recomendación
 };
 
 type ApiOne = { ok?: boolean; item?: Item; error?: string };
@@ -58,6 +70,34 @@ type ApiList = { ok?: boolean; items?: Item[]; error?: string };
 
 export default function InmueblePage() {
   const { id } = useParams<{ id: string }>();
+  // --- MÉTRICAS PREMIUM ---
+  const [stats, setStats] = useState<any>(null);
+  const [statsLoading, setStatsLoading] = useState(true);
+  const [statsError, setStatsError] = useState<string|null>(null);
+  // Fetch de métricas premium
+  useEffect(() => {
+    if (!id) return;
+    setStatsLoading(true);
+    setStatsError(null);
+    fetch(`/api/listings/${id}/stats`)
+      .then(res => res.json())
+      .then(data => {
+        if (!data.ok) throw new Error(data.error || "Error stats");
+        setStats({
+          visits: data.totalVisits ?? 0,
+          favorites: data.totalFavs ?? 0,
+          visitsByDay: data.visitsByDay ?? [],
+        });
+      })
+      .catch(e => setStatsError(e.message || "Error stats"))
+      .finally(() => setStatsLoading(false));
+  }, [id]);
+  // Tracking de visitas (debe ir después de declarar 'id')
+  useEffect(() => {
+    if (!id) return;
+    fetch(`/api/listings/${id}/track-visit`, { method: "POST" })
+      .catch(err => console.error("Error registrando visita:", err));
+  }, [id]);
   const router = useRouter();
 
   const [loading, setLoading] = useState(true);
@@ -68,6 +108,9 @@ export default function InmueblePage() {
   const [idx, setIdx] = useState(0);
   const [similar, setSimilar] = useState<Item[]>([]);
   const [simErr, setSimErr] = useState<string | null>(null);
+
+  // Estado del lightbox
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   // Estado del formulario de contacto
   const [openContact, setOpenContact] = useState(false);
@@ -95,6 +138,11 @@ export default function InmueblePage() {
         if (!ok) return;
         setItem(data.item);
         setIdx(0);
+
+        // Incrementar contador de vistas
+        fetch(`/api/listings/${id}/view`, { method: "POST" }).catch(err => 
+          console.error("Error incrementando vistas:", err)
+        );
       } catch (e: any) {
         setErr(e?.message || "Error de red");
       } finally {
@@ -104,25 +152,24 @@ export default function InmueblePage() {
     return () => { ok = false; };
   }, [id]);
 
-  // Similares por tipo de propiedad
+  // Recomendaciones inteligentes
   useEffect(() => {
-    if (!item?.propertyType) return;
-    const type = item.propertyType;
+    if (!item?._id) return;
     let ok = true;
     (async () => {
       try {
         setSimErr(null);
-        const res = await fetch(`/api/listings?type=${encodeURIComponent(type)}`, { cache: "no-store" });
-        const data: ApiList = await res.json();
-        if (!res.ok) throw new Error(data?.error || "No se pudo cargar similares");
+        const res = await fetch(`/api/recommendations/${item._id}`, { cache: "no-store" });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data?.error || "No se pudo cargar recomendaciones");
         if (!ok) return;
-        setSimilar((data.items || []).filter(x => x._id !== item._id).slice(0, 4));
+        setSimilar(data.recommendations || []);
       } catch (e: any) {
-        setSimErr(e?.message || "Error cargando similares");
+        setSimErr(e?.message || "Error cargando recomendaciones");
       }
     })();
     return () => { ok = false; };
-  }, [item?._id, item?.propertyType]);
+  }, [item?._id]);
 
   // Meta tags dinámicos para SEO
   useEffect(() => {
@@ -132,7 +179,8 @@ export default function InmueblePage() {
     const description = item.description 
       ? item.description.slice(0, 160) 
       : `${item.propertyType || "Propiedad"} en ${item.operationType || "venta"} en ${item.location}. ${item.price ? `Precio: ${item.currency} ${new Intl.NumberFormat("es-AR").format(item.price)}` : ""}`;
-    const imageUrl = item.images?.[0] || "/logo-itelsa-go.svg";
+    const imageUrl = item.images?.[0] ? `${window.location.origin}${item.images[0]}` : `${window.location.origin}/logo-itelsa-go.svg`;
+    const url = window.location.href;
 
     document.title = title;
     
@@ -145,13 +193,24 @@ export default function InmueblePage() {
     }
     metaDesc.setAttribute('content', description);
 
+    // Canonical URL
+    let canonical = document.querySelector('link[rel="canonical"]') as HTMLLinkElement;
+    if (!canonical) {
+      canonical = document.createElement('link');
+      canonical.setAttribute('rel', 'canonical');
+      document.head.appendChild(canonical);
+    }
+    canonical.href = url;
+
     // Open Graph tags
     const ogTags = {
       'og:title': title,
       'og:description': description,
       'og:image': imageUrl,
+      'og:url': url,
       'og:type': 'website',
-      'og:locale': 'es_AR'
+      'og:locale': 'es_AR',
+      'og:site_name': 'ITELSA Go'
     };
 
     Object.entries(ogTags).forEach(([property, content]) => {
@@ -169,7 +228,8 @@ export default function InmueblePage() {
       'twitter:card': 'summary_large_image',
       'twitter:title': title,
       'twitter:description': description,
-      'twitter:image': imageUrl
+      'twitter:image': imageUrl,
+      'twitter:site': '@ItelsaGo'
     };
 
     Object.entries(twitterTags).forEach(([name, content]) => {
@@ -181,6 +241,44 @@ export default function InmueblePage() {
       }
       metaTag.setAttribute('content', content);
     });
+
+    // JSON-LD Structured Data (Schema.org)
+    const structuredData = {
+      "@context": "https://schema.org",
+      "@type": "RealEstateListing",
+      "name": item.title,
+      "description": description,
+      "url": url,
+      "image": item.images?.map(img => `${window.location.origin}${img}`) || [imageUrl],
+      "offers": {
+        "@type": "Offer",
+        "price": item.price,
+        "priceCurrency": item.currency,
+        "availability": "https://schema.org/InStock",
+        "seller": {
+          "@type": "Organization",
+          "name": item.agency?.name || "ITELSA Go",
+          ...(item.agency?.logo && { "logo": `${window.location.origin}${item.agency.logo}` })
+        }
+      },
+      "address": {
+        "@type": "PostalAddress",
+        "addressLocality": item.location,
+        "addressCountry": "AR"
+      },
+      ...(item.m2Total && { "floorSize": { "@type": "QuantitativeValue", "value": item.m2Total, "unitCode": "MTK" } }),
+      ...(item.bedrooms && { "numberOfBedrooms": item.bedrooms }),
+      ...(item.bathrooms && { "numberOfBathroomsTotal": item.bathrooms }),
+      ...(item.rooms && { "numberOfRooms": item.rooms })
+    };
+
+    let scriptTag = document.querySelector('script[type="application/ld+json"]');
+    if (!scriptTag) {
+      scriptTag = document.createElement('script');
+      scriptTag.setAttribute('type', 'application/ld+json');
+      document.head.appendChild(scriptTag);
+    }
+    scriptTag.textContent = JSON.stringify(structuredData);
   }, [item]);
 
   // Imágenes seguras
@@ -371,7 +469,13 @@ export default function InmueblePage() {
               overflow: "hidden",
               border: "1px solid rgba(255,255,255,.10)",
               background: "rgba(255,255,255,.03)",
+              cursor: "pointer",
+              transition: "transform 0.2s ease",
+              "&:hover": {
+                transform: "scale(1.01)",
+              },
             }}
+            onClick={() => setLightboxOpen(true)}
           >
             <img
               src={imgs[safeIdx]}
@@ -441,7 +545,10 @@ export default function InmueblePage() {
               {imgs.map((src, i) => (
                 <button
                   key={i}
-                  onClick={() => setIdx(i)}
+                  onClick={() => {
+                    setIdx(i);
+                    setLightboxOpen(true);
+                  }}
                   style={{
                     position: "relative",
                     paddingTop: "62%",
@@ -497,8 +604,32 @@ export default function InmueblePage() {
               borderRadius: 2,
               border: "1px solid rgba(255,255,255,.12)",
               background: "linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.02))",
+              mb: 2,
             }}
           >
+            {/* MÉTRICAS PREMIUM */}
+            <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 1 }}>
+              {statsLoading ? (
+                <CircularProgress size={18} />
+              ) : statsError ? (
+                <Tooltip title={statsError}><Typography color="error">Error métricas</Typography></Tooltip>
+              ) : (
+                <>
+                  <Tooltip title="Visitas únicas a este inmueble">
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, fontWeight: 700, fontSize: 18, color: "#00bcd4", transition: "transform 0.2s", ':hover': { transform: 'scale(1.08)' } }}>
+                      <VisibilityIcon sx={{ fontSize: 22, mr: 0.3 }} />
+                      {stats?.visits ?? 0}
+                    </Box>
+                  </Tooltip>
+                  <Tooltip title="Usuarios que marcaron como favorito">
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, fontWeight: 700, fontSize: 18, color: "#e91e63", transition: "transform 0.2s", ':hover': { transform: 'scale(1.08)' } }}>
+                      <FavoriteIcon sx={{ fontSize: 22, mr: 0.3 }} />
+                      {stats?.favorites ?? 0}
+                    </Box>
+                  </Tooltip>
+                </>
+              )}
+            </Box>
             <Typography variant="h4" fontWeight={900} sx={{ lineHeight: 1 }}>
               {priceLabel}
             </Typography>
@@ -518,32 +649,14 @@ export default function InmueblePage() {
               {item.garage && <Chip label="Cochera" size="small" />}
             </Box>
 
-            <Box sx={{ display: "flex", gap: 1.2, mt: 2 }}>
-              <Button
-                fullWidth
-                variant="contained"
-                startIcon={<WhatsAppIcon />}
-                href={waLink()}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                WhatsApp
-              </Button>
-              <Button fullWidth variant="outlined" startIcon={<PhoneIcon />} href={telLink()} disabled={!telLink()}>
-                Llamar
-              </Button>
+            {/* Sección de contacto con la agencia */}
+            <Box sx={{ mt: 3 }}>
+              <AgencyContact
+                agency={item.agency}
+                propertyTitle={item.title}
+                onConsultaClick={() => setOpenContact(true)}
+              />
             </Box>
-
-            {/* Botón de consulta por email */}
-            <Button
-              fullWidth
-              variant="outlined"
-              startIcon={<EmailIcon />}
-              onClick={() => setOpenContact(true)}
-              sx={{ mt: 1.2 }}
-            >
-              Consultar por Email
-            </Button>
 
             {/* Botones de admin */}
             {role === "admin" && (
@@ -620,8 +733,13 @@ export default function InmueblePage() {
                     }}
                   />
                 )}
-                {item.agency?.phone && (
-                  <Typography sx={{ opacity: 0.75, fontSize: 13 }}>{item.agency.phone}</Typography>
+                {item.agency?.plan && (
+                  <Typography sx={{ opacity: 0.75, fontSize: 13, fontWeight: 600 }}>
+                    {item.agency.plan === "free" && "+5 ventas"}
+                    {item.agency.plan === "pro" && "+25 ventas"}
+                    {item.agency.plan === "premium" && "+100 ventas"}
+                    {item.agency.plan === "sponsor" && "+25 ventas"}
+                  </Typography>
                 )}
               </Box>
             </Box>
@@ -629,25 +747,60 @@ export default function InmueblePage() {
         </Box>
       </Box>
 
-      {/* Similares */}
-      <Box sx={{ mt: 4 }}>
-        <Typography variant="h6" fontWeight={800} sx={{ mb: 1 }}>
-          Propiedades similares: {item.propertyType ? labelTipo(item.propertyType) : "Todas"}
-        </Typography>
+      {/* Recomendaciones inteligentes */}
+      <Box sx={{ mt: 5 }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}>
+          <Typography variant="h5" fontWeight={800}>
+            Te puede interesar
+          </Typography>
+          <Chip 
+            label="Recomendado para ti" 
+            size="small"
+            sx={{
+              background: "linear-gradient(135deg, #00d0ff, #0099cc)",
+              color: "#fff",
+              fontWeight: 700,
+            }}
+          />
+        </Box>
+        
         {simErr ? (
           <Typography sx={{ opacity: 0.7 }}>{simErr}</Typography>
         ) : similar.length === 0 ? (
-          <Typography sx={{ opacity: 0.7 }}>No encontramos similares.</Typography>
+          <Typography sx={{ opacity: 0.7 }}>No hay recomendaciones disponibles en este momento.</Typography>
         ) : (
           <Box
             sx={{
               display: "grid",
-              gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)", md: "repeat(3, 1fr)", lg: "repeat(4, 1fr)" },
+              gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)", md: "repeat(3, 1fr)" },
               gap: 3,
             }}
           >
             {similar.map((s) => (
-              <PropertyCard key={s._id} item={s} />
+              <Box key={s._id} sx={{ position: "relative" }}>
+                {/* Badge de razón principal */}
+                {s._reasons && s._reasons.length > 0 && (
+                  <Box
+                    sx={{
+                      position: "absolute",
+                      top: 8,
+                      left: 8,
+                      zIndex: 2,
+                      bgcolor: "rgba(0, 208, 255, 0.95)",
+                      color: "#fff",
+                      px: 1.5,
+                      py: 0.5,
+                      borderRadius: 2,
+                      fontSize: "0.75rem",
+                      fontWeight: 700,
+                      boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
+                    }}
+                  >
+                    {s._reasons[0]}
+                  </Box>
+                )}
+                <PropertyCard item={s} />
+              </Box>
             ))}
           </Box>
         )}
@@ -726,6 +879,15 @@ export default function InmueblePage() {
           )}
         </DialogActions>
       </Dialog>
+
+      {/* Lightbox de imágenes */}
+      {lightboxOpen && (
+        <ImageLightbox
+          images={imgs}
+          initialIndex={safeIdx}
+          onClose={() => setLightboxOpen(false)}
+        />
+      )}
     </main>
   );
 }

@@ -1,0 +1,423 @@
+"use client";
+
+import { useEffect, useState, useRef } from "react";
+import { Box, IconButton, Typography } from "@mui/material";
+import CloseIcon from "@mui/icons-material/Close";
+import NavigateBeforeIcon from "@mui/icons-material/NavigateBefore";
+import NavigateNextIcon from "@mui/icons-material/NavigateNext";
+import ZoomInIcon from "@mui/icons-material/ZoomIn";
+import ZoomOutIcon from "@mui/icons-material/ZoomOut";
+import FullscreenIcon from "@mui/icons-material/Fullscreen";
+import FullscreenExitIcon from "@mui/icons-material/FullscreenExit";
+
+type ImageLightboxProps = {
+  images: string[];
+  initialIndex?: number;
+  onClose: () => void;
+};
+
+export default function ImageLightbox({ images, initialIndex = 0, onClose }: ImageLightboxProps) {
+  const [currentIndex, setCurrentIndex] = useState(initialIndex);
+  const [zoom, setZoom] = useState(1);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(null);
+  const [initialPinchDistance, setInitialPinchDistance] = useState<number | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const imageRef = useRef<HTMLImageElement>(null);
+
+  // Navegación con teclado
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+      if (e.key === "ArrowLeft") handlePrev();
+      if (e.key === "ArrowRight") handleNext();
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [currentIndex]);
+
+  // Fullscreen API
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
+  }, []);
+
+  const handlePrev = () => {
+    setCurrentIndex((prev) => (prev > 0 ? prev - 1 : images.length - 1));
+    resetZoom();
+  };
+
+  const handleNext = () => {
+    setCurrentIndex((prev) => (prev < images.length - 1 ? prev + 1 : 0));
+    resetZoom();
+  };
+
+  const handleZoomIn = () => {
+    setZoom((prev) => Math.min(prev + 0.5, 4));
+  };
+
+  const handleZoomOut = () => {
+    setZoom((prev) => Math.max(prev - 0.5, 1));
+  };
+
+  const resetZoom = () => {
+    setZoom(1);
+    setPosition({ x: 0, y: 0 });
+  };
+
+  const toggleFullscreen = async () => {
+    if (!containerRef.current) return;
+
+    try {
+      if (!document.fullscreenElement) {
+        await containerRef.current.requestFullscreen();
+      } else {
+        await document.exitFullscreen();
+      }
+    } catch (err) {
+      console.error("Error toggling fullscreen:", err);
+    }
+  };
+
+  // Mouse wheel zoom
+  const handleWheel = (e: React.WheelEvent) => {
+    e.preventDefault();
+    if (e.deltaY < 0) {
+      handleZoomIn();
+    } else {
+      handleZoomOut();
+    }
+  };
+
+  // Pan con mouse
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (zoom > 1) {
+      setIsDragging(true);
+      setDragStart({ x: e.clientX - position.x, y: e.clientY - position.y });
+    }
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (isDragging && zoom > 1) {
+      setPosition({
+        x: e.clientX - dragStart.x,
+        y: e.clientY - dragStart.y,
+      });
+    }
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  // Touch gestures para móvil/tablet
+  const getTouchDistance = (touches: React.TouchList) => {
+    const touch1 = touches[0];
+    const touch2 = touches[1];
+    return Math.sqrt(
+      Math.pow(touch2.clientX - touch1.clientX, 2) +
+      Math.pow(touch2.clientY - touch1.clientY, 2)
+    );
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 1) {
+      // Single touch - preparar para swipe
+      setTouchStart({ x: e.touches[0].clientX, y: e.touches[0].clientY });
+      
+      // Si hay zoom, preparar para pan
+      if (zoom > 1) {
+        setIsDragging(true);
+        setDragStart({ 
+          x: e.touches[0].clientX - position.x, 
+          y: e.touches[0].clientY - position.y 
+        });
+      }
+    } else if (e.touches.length === 2) {
+      // Pinch zoom
+      const distance = getTouchDistance(e.touches);
+      setInitialPinchDistance(distance);
+      setTouchStart(null);
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (e.touches.length === 1 && touchStart && zoom === 1) {
+      // Swipe detection (solo si no hay zoom)
+      const deltaX = e.touches[0].clientX - touchStart.x;
+      const deltaY = Math.abs(e.touches[0].clientY - touchStart.y);
+      
+      // Si el movimiento es más horizontal que vertical
+      if (Math.abs(deltaX) > 50 && deltaY < 30) {
+        if (deltaX > 0) {
+          handlePrev();
+        } else {
+          handleNext();
+        }
+        setTouchStart(null);
+      }
+    } else if (e.touches.length === 1 && zoom > 1 && isDragging) {
+      // Pan con un dedo cuando hay zoom
+      e.preventDefault();
+      setPosition({
+        x: e.touches[0].clientX - dragStart.x,
+        y: e.touches[0].clientY - dragStart.y,
+      });
+    } else if (e.touches.length === 2 && initialPinchDistance) {
+      // Pinch zoom con dos dedos
+      e.preventDefault();
+      const currentDistance = getTouchDistance(e.touches);
+      const scale = currentDistance / initialPinchDistance;
+      const newZoom = Math.max(1, Math.min(4, zoom * scale));
+      setZoom(newZoom);
+      setInitialPinchDistance(currentDistance);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    setTouchStart(null);
+    setInitialPinchDistance(null);
+    setIsDragging(false);
+  };
+
+  return (
+    <Box
+      ref={containerRef}
+      sx={{
+        position: "fixed",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        bgcolor: "rgba(0, 0, 0, 0.95)",
+        zIndex: 10000,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+      onWheel={handleWheel}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={handleMouseUp}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
+      {/* Header con controles */}
+      <Box
+        sx={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          p: 2,
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          background: "linear-gradient(180deg, rgba(0,0,0,0.8), transparent)",
+          zIndex: 2,
+        }}
+      >
+        <Typography variant="h6" sx={{ color: "#fff", fontSize: { xs: "0.9rem", sm: "1.25rem" } }}>
+          {currentIndex + 1} / {images.length}
+        </Typography>
+
+        <Box sx={{ display: "flex", gap: { xs: 0.5, sm: 1 } }}>
+          <IconButton 
+            onClick={handleZoomOut} 
+            disabled={zoom <= 1} 
+            sx={{ 
+              color: "#fff",
+              display: { xs: "none", sm: "flex" } // Ocultar en móvil (usar pinch)
+            }}
+          >
+            <ZoomOutIcon />
+          </IconButton>
+          <IconButton 
+            onClick={handleZoomIn} 
+            disabled={zoom >= 4} 
+            sx={{ 
+              color: "#fff",
+              display: { xs: "none", sm: "flex" } // Ocultar en móvil (usar pinch)
+            }}
+          >
+            <ZoomInIcon />
+          </IconButton>
+          <IconButton 
+            onClick={toggleFullscreen} 
+            sx={{ 
+              color: "#fff",
+              fontSize: { xs: "1rem", sm: "1.5rem" }
+            }}
+          >
+            {isFullscreen ? <FullscreenExitIcon /> : <FullscreenIcon />}
+          </IconButton>
+          <IconButton 
+            onClick={onClose} 
+            sx={{ 
+              color: "#fff",
+              fontSize: { xs: "1rem", sm: "1.5rem" }
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </Box>
+      </Box>
+
+      {/* Imagen principal */}
+      <Box
+        sx={{
+          flex: 1,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          overflow: "hidden",
+          cursor: zoom > 1 ? (isDragging ? "grabbing" : "grab") : "default",
+          userSelect: "none",
+          touchAction: zoom > 1 ? "none" : "auto", // Desactivar scroll nativo cuando hay zoom
+        }}
+        onMouseDown={handleMouseDown}
+      >
+        {/* Hint de swipe para móvil (solo se ve en primera carga) */}
+        {zoom === 1 && images.length > 1 && (
+          <Typography
+            sx={{
+              position: "absolute",
+              bottom: { xs: 80, sm: 100 },
+              color: "rgba(255,255,255,0.5)",
+              fontSize: { xs: "0.75rem", sm: "0.875rem" },
+              display: { xs: "block", sm: "none" },
+              animation: "fadeOut 3s forwards",
+              "@keyframes fadeOut": {
+                "0%": { opacity: 1 },
+                "70%": { opacity: 1 },
+                "100%": { opacity: 0 },
+              },
+            }}
+          >
+            ← Deslizá para cambiar →
+          </Typography>
+        )}
+        
+        <img
+          ref={imageRef}
+          src={images[currentIndex]}
+          alt={`Imagen ${currentIndex + 1}`}
+          style={{
+            maxWidth: zoom === 1 ? "90vw" : "none",
+            maxHeight: zoom === 1 ? "80vh" : "none",
+            width: zoom > 1 ? `${zoom * 100}%` : "auto",
+            height: "auto",
+            objectFit: "contain",
+            transform: `translate(${position.x}px, ${position.y}px)`,
+            transition: isDragging ? "none" : "transform 0.3s ease",
+          }}
+        />
+      </Box>
+
+      {/* Navegación anterior */}
+      {images.length > 1 && (
+        <IconButton
+          onClick={handlePrev}
+          sx={{
+            position: "absolute",
+            left: { xs: 8, sm: 16 },
+            top: "50%",
+            transform: "translateY(-50%)",
+            bgcolor: "rgba(0,0,0,0.6)",
+            color: "#fff",
+            width: { xs: 40, sm: 48 },
+            height: { xs: 40, sm: 48 },
+            "&:hover": { bgcolor: "rgba(0,0,0,0.8)" },
+            zIndex: 3,
+          }}
+        >
+          <NavigateBeforeIcon fontSize="large" />
+        </IconButton>
+      )}
+
+      {/* Navegación siguiente */}
+      {images.length > 1 && (
+        <IconButton
+          onClick={handleNext}
+          sx={{
+            position: "absolute",
+            right: { xs: 8, sm: 16 },
+            top: "50%",
+            transform: "translateY(-50%)",
+            bgcolor: "rgba(0,0,0,0.6)",
+            color: "#fff",
+            width: { xs: 40, sm: 48 },
+            height: { xs: 40, sm: 48 },
+            "&:hover": { bgcolor: "rgba(0,0,0,0.8)" },
+            zIndex: 3,
+          }}
+        >
+          <NavigateNextIcon fontSize="large" />
+        </IconButton>
+      )}
+
+      {/* Thumbnails */}
+      {images.length > 1 && (
+        <Box
+          sx={{
+            position: "absolute",
+            bottom: 0,
+            left: 0,
+            right: 0,
+            p: { xs: 1, sm: 2 },
+            display: { xs: images.length <= 10 ? "flex" : "none", sm: "flex" }, // Ocultar en móvil si hay muchas
+            gap: { xs: 0.5, sm: 1 },
+            justifyContent: "center",
+            background: "linear-gradient(0deg, rgba(0,0,0,0.8), transparent)",
+            overflowX: "auto",
+            zIndex: 2,
+            "&::-webkit-scrollbar": { height: 6 },
+            "&::-webkit-scrollbar-thumb": { bgcolor: "rgba(255,255,255,0.3)", borderRadius: 3 },
+          }}
+        >
+          {images.map((img, idx) => (
+            <Box
+              key={idx}
+              onClick={() => {
+                setCurrentIndex(idx);
+                resetZoom();
+              }}
+              sx={{
+                width: { xs: 60, sm: 80 },
+                height: { xs: 45, sm: 60 },
+                flexShrink: 0,
+                cursor: "pointer",
+                border: idx === currentIndex ? "3px solid #00d0ff" : "3px solid transparent",
+                borderRadius: 1,
+                overflow: "hidden",
+                transition: "all 0.2s ease",
+                opacity: idx === currentIndex ? 1 : 0.6,
+                "&:hover": { opacity: 1, transform: "scale(1.05)" },
+              }}
+            >
+              <img
+                src={img}
+                alt={`Thumbnail ${idx + 1}`}
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "cover",
+                }}
+              />
+            </Box>
+          ))}
+        </Box>
+      )}
+    </Box>
+  );
+}

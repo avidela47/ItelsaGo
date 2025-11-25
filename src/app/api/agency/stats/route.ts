@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { dbConnect } from "@/lib/mongo";
 import Listing from "@/models/Listing";
 import Agency from "@/models/Agency";
+import Contact from "@/models/Contact";
 
 /**
  * GET /api/agency/stats
@@ -29,11 +30,17 @@ export async function GET(req: NextRequest) {
     const totalViews = listings.reduce((sum: number, l: any) => sum + (l.views || 0), 0);
     const featuredProperties = listings.filter((l: any) => l.featured).length;
 
+    // Obtener estadísticas de contactos
+    const totalContacts = await Contact.countDocuments({ agency: agencyId });
+    const pendingContacts = await Contact.countDocuments({ agency: agencyId, status: "pending" });
+
     return NextResponse.json({
       ok: true,
       totalProperties,
       totalViews,
       featuredProperties,
+      totalContacts,
+      pendingContacts,
     });
   } catch (err: any) {
     console.error("GET /api/agency/stats error:", err);

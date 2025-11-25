@@ -36,16 +36,18 @@ export async function GET(req: NextRequest) {
 
     // Definir límites
     const limits: Record<string, number> = {
-      free: 3,
-      pro: 10,
-      premium: 999999,
+      free: 5,
+      pro: 25,
+      premium: 50,
     };
 
     const limit = limits[plan] || 3;
 
     return NextResponse.json({
       ok: true,
+      name: (agency as any).name || "Mi Inmobiliaria",
       plan,
+      logo: (agency as any).logo || null,
       propertiesCount,
       limit,
       remaining: Math.max(0, limit - propertiesCount),
