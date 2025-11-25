@@ -12,6 +12,7 @@ const AgencySchema = new Schema(
     email: { type: String }, // Email de contacto
     phone: { type: String }, // Teléfono
     whatsapp: { type: String }, // WhatsApp
+    status: { type: String, enum: ["active", "paused"], default: "active" },
   },
   { timestamps: true }
 );

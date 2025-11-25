@@ -14,6 +14,8 @@ import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Alert from "@mui/material/Alert";
 import DashboardIcon from "@mui/icons-material/Dashboard";
+import Button from "@mui/material/Button";
+import BusinessIcon from "@mui/icons-material/Business";
 import HomeWorkIcon from "@mui/icons-material/HomeWork";
 import PeopleIcon from "@mui/icons-material/People";
 import HistoryIcon from "@mui/icons-material/History";
@@ -41,6 +43,14 @@ type Stats = {
     currency: string;
     plan: string;
     createdAt: string;
+    agency?: {
+      _id?: string;
+      name?: string;
+      logo?: string;
+      plan?: string;
+    } | null;
+    propertyType?: string;
+    warningAgency?: string;
   }>;
 };
 
@@ -191,6 +201,17 @@ export default function PanelHome() {
         </Box>
       </Box>
 
+      {/* Acceso rápido a gestión de inmobiliarias */}
+      <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 2 }}>
+        <Button
+          variant="contained"
+          color="primary"
+          href="/panel/agencies"
+          startIcon={<BusinessIcon />}
+        >
+          Gestionar Inmobiliarias
+        </Button>
+      </Box>
       {/* Estadísticas de Usuarios por Rol */}
       <Box>
         <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
@@ -383,42 +404,59 @@ export default function PanelHome() {
           <Table size="small">
             <TableHead>
               <TableRow>
-                <TableCell>Título</TableCell>
-                <TableCell>Ubicación</TableCell>
-                <TableCell>Precio</TableCell>
+                <TableCell>Inmobiliaria</TableCell>
                 <TableCell>Plan</TableCell>
+                <TableCell>Inmueble</TableCell>
+                <TableCell>Tipo</TableCell>
+                <TableCell>Precio</TableCell>
                 <TableCell>Fecha</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {stats.latestListings.map((item) => (
                 <TableRow key={item._id} hover>
+                  {/* Inmobiliaria */}
+                  <TableCell>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      {item.agency?.logo ? (
+                        <img src={item.agency.logo} alt="logo" style={{ width: 24, height: 24, objectFit: "contain" }} />
+                      ) : (
+                        <span style={{ width: 24, height: 24, display: 'inline-block', background: '#eee', borderRadius: 12 }} />
+                      )}
+                      <Typography variant="body2">{item.agency?.name || "Sin inmobiliaria"}</Typography>
+                    </Box>
+                  </TableCell>
+                  {/* Plan */}
+                  <TableCell>
+                    {item.warningAgency ? (
+                      <Chip
+                        size="small"
+                        label={item.agency?.plan ? item.agency.plan.toUpperCase() : "SIN PLAN"}
+                        color="warning"
+                        sx={{ fontWeight: 700 }}
+                        title={item.warningAgency}
+                      />
+                    ) : (
+                      <Chip
+                        size="small"
+                        label={(item.agency?.plan || "FREE").toUpperCase()}
+                        sx={{
+                          fontWeight: 700,
+                          background: item.agency?.plan === "premium" ? "#D9A441" : item.agency?.plan === "pro" ? "#2A6EBB" : "#4CAF50",
+                          color: "#fff"
+                        }}
+                      />
+                    )}
+                  </TableCell>
+                  {/* Inmueble */}
                   <TableCell>{item.title}</TableCell>
-                  <TableCell>{item.location}</TableCell>
+                  {/* Tipo */}
+                  <TableCell>{item.propertyType || '-'}</TableCell>
+                  {/* Precio */}
                   <TableCell>
                     {item.currency} {new Intl.NumberFormat("es-AR").format(item.price || 0)}
                   </TableCell>
-                  <TableCell>
-                    <Chip
-                      size="small"
-                      label={item.plan.toUpperCase()}
-                      sx={{
-                        background:
-                          item.plan === "premium"
-                            ? "#D9A44120"
-                            : item.plan === "pro"
-                            ? "#2A6EBB20"
-                            : "#4CAF5020",
-                        color:
-                          item.plan === "premium"
-                            ? "#D9A441"
-                            : item.plan === "pro"
-                            ? "#2A6EBB"
-                            : "#4CAF50",
-                        fontWeight: 700,
-                      }}
-                    />
-                  </TableCell>
+                  {/* Fecha */}
                   <TableCell>
                     {item.createdAt
                       ? new Date(item.createdAt).toLocaleDateString("es-AR")

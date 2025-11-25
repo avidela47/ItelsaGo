@@ -3,6 +3,7 @@
 import { Box, Typography, Button, Card, Chip } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import { useEffect } from "react";
+import { PLAN_PRICES } from "@/lib/planPrices";
 
 type Props = {
   onClose: () => void;
@@ -20,7 +21,7 @@ export default function PlanesSection({ onClose }: Props) {
     {
       id: "free",
       name: "FREE",
-      price: 0,
+      price: PLAN_PRICES.free,
       icon: "🧱",
       color: "#4CAF50",
       colorSecondary: "#A9E5B0",
@@ -40,7 +41,7 @@ export default function PlanesSection({ onClose }: Props) {
     {
       id: "pro",
       name: "PRO",
-      price: 100,
+      price: PLAN_PRICES.pro,
       icon: "🏠",
       color: "#2A6EBB",
       colorSecondary: "#70A6FF",
@@ -60,7 +61,7 @@ export default function PlanesSection({ onClose }: Props) {
     {
       id: "premium",
       name: "PREMIUM",
-      price: 500,
+      price: PLAN_PRICES.premium,
       icon: "🏢",
       color: "#D9A441",
       colorSecondary: "#F2DFA5",

@@ -3,9 +3,27 @@ import Alert from "@/models/Alert";
 import User from "@/models/User";
 import Listing from "@/models/Listing";
 
-// Stub temporal para evitar error de compilación
-async function sendEmail({ to, subject, html }: { to: string; subject: string; html: string }) {
-  console.log(`Simulando envío de email a ${to} con asunto '${subject}'`);
+import sgMail from "@sendgrid/mail";
+import { SENDGRID_API_KEY, SENDGRID_FROM } from "./emailConfig";
+
+sgMail.setApiKey(SENDGRID_API_KEY);
+
+export async function sendEmail({ to, subject, html }: { to: string; subject: string; html: string }) {
+  if (!SENDGRID_API_KEY || !SENDGRID_FROM) {
+    console.warn("[sendEmail] Falta configurar SENDGRID_API_KEY o SENDGRID_FROM. Email no enviado.");
+    return;
+  }
+  try {
+    await sgMail.send({
+      to,
+      from: SENDGRID_FROM,
+      subject,
+      html,
+    });
+    console.log(`[sendEmail] Email enviado a ${to} con asunto '${subject}'`);
+  } catch (err: any) {
+    console.error("[sendEmail] Error enviando email:", err?.response?.body || err);
+  }
 }
 
 // Utilidad para comparar si un listing coincide con los criterios de la alerta

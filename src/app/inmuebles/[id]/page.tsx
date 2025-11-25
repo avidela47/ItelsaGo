@@ -1,6 +1,14 @@
+
 "use client";
 
+
 import { useEffect, useMemo, useState } from "react";
+import Tooltip from "@mui/material/Tooltip";
+import FavoriteIcon from "@mui/icons-material/Favorite";
+import VisibilityIcon from "@mui/icons-material/Visibility";
+import ContactMailIcon from "@mui/icons-material/ContactMail";
+import TrendingUpIcon from "@mui/icons-material/TrendingUp";
+import StarIcon from "@mui/icons-material/Star";
 import { useParams, useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import Box from "@mui/material/Box";
@@ -62,6 +70,28 @@ type ApiList = { ok?: boolean; items?: Item[]; error?: string };
 
 export default function InmueblePage() {
   const { id } = useParams<{ id: string }>();
+  // --- MÉTRICAS PREMIUM ---
+  const [stats, setStats] = useState<any>(null);
+  const [statsLoading, setStatsLoading] = useState(true);
+  const [statsError, setStatsError] = useState<string|null>(null);
+  // Fetch de métricas premium
+  useEffect(() => {
+    if (!id) return;
+    setStatsLoading(true);
+    setStatsError(null);
+    fetch(`/api/listings/${id}/stats`)
+      .then(res => res.json())
+      .then(data => {
+        if (!data.ok) throw new Error(data.error || "Error stats");
+        setStats({
+          visits: data.totalVisits ?? 0,
+          favorites: data.totalFavs ?? 0,
+          visitsByDay: data.visitsByDay ?? [],
+        });
+      })
+      .catch(e => setStatsError(e.message || "Error stats"))
+      .finally(() => setStatsLoading(false));
+  }, [id]);
   // Tracking de visitas (debe ir después de declarar 'id')
   useEffect(() => {
     if (!id) return;
@@ -574,8 +604,32 @@ export default function InmueblePage() {
               borderRadius: 2,
               border: "1px solid rgba(255,255,255,.12)",
               background: "linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.02))",
+              mb: 2,
             }}
           >
+            {/* MÉTRICAS PREMIUM */}
+            <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 1 }}>
+              {statsLoading ? (
+                <CircularProgress size={18} />
+              ) : statsError ? (
+                <Tooltip title={statsError}><Typography color="error">Error métricas</Typography></Tooltip>
+              ) : (
+                <>
+                  <Tooltip title="Visitas únicas a este inmueble">
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, fontWeight: 700, fontSize: 18, color: "#00bcd4", transition: "transform 0.2s", ':hover': { transform: 'scale(1.08)' } }}>
+                      <VisibilityIcon sx={{ fontSize: 22, mr: 0.3 }} />
+                      {stats?.visits ?? 0}
+                    </Box>
+                  </Tooltip>
+                  <Tooltip title="Usuarios que marcaron como favorito">
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, fontWeight: 700, fontSize: 18, color: "#e91e63", transition: "transform 0.2s", ':hover': { transform: 'scale(1.08)' } }}>
+                      <FavoriteIcon sx={{ fontSize: 22, mr: 0.3 }} />
+                      {stats?.favorites ?? 0}
+                    </Box>
+                  </Tooltip>
+                </>
+              )}
+            </Box>
             <Typography variant="h4" fontWeight={900} sx={{ lineHeight: 1 }}>
               {priceLabel}
             </Typography>

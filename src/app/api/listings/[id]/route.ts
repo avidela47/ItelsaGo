@@ -1,3 +1,55 @@
+export async function PATCH(req: NextRequest, { params }: Params) {
+  try {
+    await dbConnect();
+    const isAdmin = isAdminFromRequest(req);
+    const role = req.cookies.get("role")?.value;
+
+    // Verificar permisos
+    if (!isAdmin && role !== "agency") {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    }
+
+    // Si es agency, verificar que sea dueño de la propiedad
+    if (role === "agency" && !isAdmin) {
+      const agencyId = req.cookies.get("agencyId")?.value;
+      const existingItem = await Listing.findById(params.id).lean();
+      if (!existingItem) {
+        return NextResponse.json({ error: "No encontrado" }, { status: 404 });
+      }
+      const itemAgencyId = String((existingItem as any).agency);
+      if (itemAgencyId !== agencyId) {
+        return NextResponse.json(
+          { error: "No podés editar propiedades de otras inmobiliarias" },
+          { status: 403 }
+        );
+      }
+    }
+
+    const body = await req.json();
+    const { status, featured } = body;
+    const update: any = {};
+    if (typeof status === "string" && ["active", "suspended"].includes(status)) {
+      update.status = status;
+    }
+    if (typeof featured === "boolean") {
+      update.featured = featured;
+    }
+    if (Object.keys(update).length === 0) {
+      return NextResponse.json({ error: "Nada para actualizar" }, { status: 400 });
+    }
+    const item = await Listing.findByIdAndUpdate(params.id, update, { new: true }).lean();
+    if (!item) {
+      return NextResponse.json({ error: "No encontrado" }, { status: 404 });
+    }
+    return NextResponse.json({ ok: true, item });
+  } catch (err: any) {
+    console.error("PATCH /api/listings/[id] error:", err);
+    return NextResponse.json(
+      { error: err?.message || "Error interno" },
+      { status: 500 }
+    );
+  }
+}
 import { NextRequest, NextResponse } from "next/server";
 import { dbConnect } from "@/lib/mongo";
 import Listing from "@/models/Listing";

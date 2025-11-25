@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { dbConnect } from "@/lib/mongo";
 import Listing from "@/models/Listing";
+import Agency from "@/models/Agency";
+import { PLAN_PRICES } from "@/lib/planPrices";
 
 /**
  * GET /api/admin/financial-stats
@@ -12,88 +14,66 @@ import Listing from "@/models/Listing";
  * - Tendencia últimos 6 meses
  */
 
-const PLAN_PRICES = {
-  free: 0,
-  pro: 100,
-  premium: 500,
-  sponsor: 100, // Alias de pro
-};
+// Valores actuales de los planes (USD): PRO = 100, PREMIUM = 500
+// Precios importados desde src/lib/planPrices.ts
 
 export async function GET() {
   try {
     await dbConnect();
 
-    // Obtener todos los listings activos con sus planes
-    const listings = await Listing.find({}).select("agency createdAt").lean();
 
-    // Calcular MRR (Monthly Recurring Revenue)
-    let mrrTotal = 0;
-    let mrrPro = 0;
-    let mrrPremium = 0;
+    // Obtener todas las agencias activas y contar por plan
+  const agencies = await Agency.find({}).select("plan createdAt").lean();
     let countPro = 0;
     let countPremium = 0;
-
-    listings.forEach((listing: any) => {
-      const plan = listing.agency?.plan || "free";
-      const normalizedPlan = plan === "sponsor" ? "pro" : plan;
-      const price = PLAN_PRICES[normalizedPlan as keyof typeof PLAN_PRICES] || 0;
-      
-      mrrTotal += price;
-      
-      if (normalizedPlan === "pro") {
-        mrrPro += price;
+    let mrrPro = 0;
+    let mrrPremium = 0;
+    agencies.forEach((agency: any) => {
+      if (agency.plan === "pro" || agency.plan === "sponsor") {
         countPro++;
-      } else if (normalizedPlan === "premium") {
-        mrrPremium += price;
+        mrrPro += PLAN_PRICES.pro;
+      } else if (agency.plan === "premium") {
         countPremium++;
+        mrrPremium += PLAN_PRICES.premium;
       }
     });
+    const mrrTotal = mrrPro + mrrPremium;
 
-    // ARR (Annual Recurring Revenue)
-    const arr = mrrTotal * 12;
+  // ARR (Annual Recurring Revenue)
+  const arr = mrrTotal * 12;
 
-    // Nuevas publicaciones este mes (PRO y PREMIUM)
+    // Nuevas altas de agencias este mes (PRO y PREMIUM)
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    
-    const newListings = listings.filter((listing: any) => {
-      if (!listing.createdAt) return false;
-      const createDate = new Date(listing.createdAt);
-      const plan = listing.agency?.plan || "free";
-      const normalizedPlan = plan === "sponsor" ? "pro" : plan;
-      return createDate >= startOfMonth && (normalizedPlan === "pro" || normalizedPlan === "premium");
-    });
-
-    const newPro = newListings.filter((l: any) => {
-      const plan = l.agency?.plan || "free";
-      return plan === "pro" || plan === "sponsor";
+    // Nuevas altas de agencias PRO y PREMIUM este mes
+    const newPro = agencies.filter((agency: any) => {
+      if (!agency.createdAt) return false;
+      const createDate = new Date(agency.createdAt);
+      return createDate >= startOfMonth && (agency.plan === "pro" || agency.plan === "sponsor");
     }).length;
-    
-    const newPremium = newListings.filter((l: any) => 
-      l.agency?.plan === "premium"
-    ).length;
+    const newPremium = agencies.filter((agency: any) => {
+      if (!agency.createdAt) return false;
+      const createDate = new Date(agency.createdAt);
+      return createDate >= startOfMonth && agency.plan === "premium";
+    }).length;
 
-    // Tendencia últimos 6 meses
+    // Tendencia últimos 6 meses (por agencias activas en cada mes)
     const last6Months: Array<{ month: string; revenue: number }> = [];
     for (let i = 5; i >= 0; i--) {
       const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const nextMonth = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
       const monthName = date.toLocaleDateString("es-AR", { month: "short" });
-      
-      // Calcular ingresos de ese mes basado en listings creados hasta esa fecha
-      const listingsUntilMonth = listings.filter((l: any) => {
-        if (!l.createdAt) return false;
-        const createDate = new Date(l.createdAt);
+      // Agencias activas hasta ese mes
+      const agenciesUntilMonth = agencies.filter((a: any) => {
+        if (!a.createdAt) return false;
+        const createDate = new Date(a.createdAt);
         return createDate < nextMonth;
       });
-      
       let monthRevenue = 0;
-      listingsUntilMonth.forEach((l: any) => {
-        const plan = l.agency?.plan || "free";
-        const normalizedPlan = plan === "sponsor" ? "pro" : plan;
-        monthRevenue += PLAN_PRICES[normalizedPlan as keyof typeof PLAN_PRICES] || 0;
+      agenciesUntilMonth.forEach((a: any) => {
+        if (a.plan === "pro" || a.plan === "sponsor") monthRevenue += PLAN_PRICES.pro;
+        else if (a.plan === "premium") monthRevenue += PLAN_PRICES.premium;
       });
-      
       last6Months.push({
         month: monthName,
         revenue: monthRevenue,

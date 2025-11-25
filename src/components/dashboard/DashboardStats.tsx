@@ -162,7 +162,7 @@ export default function DashboardStats({ plan }: Props) {
             </Typography>
           </Box>
           <Typography variant="h3" fontWeight={900} sx={{ color: "#00d0ff" }}>
-            {stats.totalViews.toLocaleString()}
+            {(typeof stats.totalViews === "number" ? stats.totalViews : 0).toLocaleString()}
           </Typography>
           <Typography variant="caption" sx={{ opacity: 0.7, mt: 1, display: "block" }}>
             En todas tus propiedades

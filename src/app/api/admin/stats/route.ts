@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { dbConnect } from "@/lib/mongo";
 import Listing from "@/models/Listing";
+import Agency from "@/models/Agency";
 import User from "@/models/User";
 
 /**
@@ -15,7 +16,10 @@ export async function GET() {
     await dbConnect();
 
     // Total de propiedades por plan
-    const listings = await Listing.find({}).select("agency createdAt title location price currency").lean();
+    const listings = await Listing.find({})
+      .sort({ createdAt: -1 })
+      .populate("agency")
+      .lean();
     
     const planCounts = {
       free: 0,
@@ -50,21 +54,42 @@ export async function GET() {
 
     // Últimas 10 propiedades
     const latestListings = listings
-      .sort((a: any, b: any) => {
-        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-        return dateB - dateA;
-      })
       .slice(0, 10)
-      .map((l: any) => ({
-        _id: String(l._id),
-        title: l.title,
-        location: l.location,
-        price: l.price,
-        currency: l.currency,
-        plan: l.agency?.plan === "sponsor" ? "pro" : (l.agency?.plan || "free"),
-        createdAt: l.createdAt,
-      }));
+      .map((l: any) => {
+        let warningAgency = '';
+        let agencyObj: { _id?: string; name?: string; logo?: string; plan?: string } | null = null;
+        if (!l.agency) {
+          warningAgency = 'Sin agencia asignada';
+          agencyObj = null;
+        } else if (!l.agency.plan) {
+          warningAgency = 'Agencia sin plan';
+          agencyObj = {
+            _id: l.agency._id?.toString(),
+            name: l.agency.name,
+            logo: l.agency.logo,
+            plan: 'sin plan'
+          };
+        } else {
+          agencyObj = {
+            _id: l.agency._id?.toString(),
+            name: l.agency.name,
+            logo: l.agency.logo,
+            plan: l.agency.plan
+          };
+        }
+        return {
+          _id: String(l._id),
+          title: l.title,
+          location: l.location,
+          price: l.price,
+          currency: l.currency,
+          plan: agencyObj?.plan || 'free',
+          agency: agencyObj,
+          warningAgency,
+          propertyType: l.propertyType,
+          createdAt: l.createdAt,
+        };
+      });
 
     return NextResponse.json({
       ok: true,

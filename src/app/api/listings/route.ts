@@ -32,10 +32,15 @@ export async function GET(req: NextRequest) {
     console.log("🔍 Buscando listings...");
     
     // Traer items CON populate
-    const items = await Listing.find(query)
+    let items = await Listing.find(query)
       .sort({ createdAt: -1 })
       .populate("agency")
       .lean();
+
+    // Filtrar para mostrar solo publicaciones de agencias activas (excepto en showAll)
+    if (showAll !== "true") {
+      items = items.filter(item => !item.agency || item.agency.status === "active");
+    }
 
     console.log("✅ Items encontrados:", items.length);
 
