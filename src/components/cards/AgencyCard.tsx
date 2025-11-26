@@ -31,6 +31,8 @@ function getPlanColor(plan: string) {
 export default function AgencyCard({ agency, onEdit, onDelete, onTogglePause, onChangePlan }: AgencyCardProps) {
   return (
     <Box
+      role="region"
+      aria-label={`Tarjeta de agencia: ${agency.name}`}
       sx={{
         display: "flex",
         flexDirection: "row",

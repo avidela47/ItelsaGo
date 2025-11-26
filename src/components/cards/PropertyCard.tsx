@@ -6,6 +6,8 @@ import Chip from "@mui/material/Chip";
 import Button from "@mui/material/Button";
 import WhatsAppIcon from "@mui/icons-material/WhatsApp";
 import FavButton from "@/components/cards/FavButton";
+import dynamic from "next/dynamic";
+const NextImage = dynamic(() => import("next/image"), { ssr: false });
 
 type Plan = "premium" | "pro" | "sponsor" | "free";
 
@@ -53,6 +55,8 @@ export default function PropertyCard({ item }: PropertyCardProps) {
     <Box
       component="a"
       href={url}
+  role="article"
+  aria-label={`Ver detalles de la propiedad ${item.title} en ${item.location}`}
       sx={{
         textDecoration: "none",
         "&:hover": { 
@@ -79,15 +83,18 @@ export default function PropertyCard({ item }: PropertyCardProps) {
             transform: "translateY(0)" 
           },
         },
-      }}
-      aria-label={item.title}
+  }}
     >
       {/* FOTO */}
       <Box sx={{ position: "relative", width: "100%", aspectRatio: "16/10", overflow: "hidden" }}>
-        <img
+        <NextImage
           src={img}
           alt={`Foto principal de ${item.title} en ${item.location}`}
-          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
+          fill
+          style={{ objectFit: "cover" }}
+          sizes="(max-width: 600px) 100vw, 600px"
+          placeholder="empty"
+          priority={false}
         />
 
         {/* BOTÓN FAVORITO → ARRIBA IZQUIERDA */}
@@ -128,11 +135,17 @@ export default function PropertyCard({ item }: PropertyCardProps) {
               border: "1px solid rgba(0,0,0,.12)",
             }}
           >
-            <img
-              src={item.agency.logo}
-              alt={`Logo de la inmobiliaria ${item.agency.logo}`}
-              style={{ width: 30, height: 30, objectFit: "contain" }}
-            />
+            {item.agency.logo && (
+              <NextImage
+                src={item.agency.logo}
+                alt={`Logo de la inmobiliaria ${item.agency.logo}`}
+                width={30}
+                height={30}
+                style={{ objectFit: "contain" }}
+                placeholder="empty"
+                priority={false}
+              />
+            )}
           </Box>
         )}
       </Box>
@@ -207,10 +220,7 @@ export default function PropertyCard({ item }: PropertyCardProps) {
               boxShadow: "0 4px 16px 0 rgba(37,211,102,.18)",
               transform: "translateY(-2px) scale(1.03)",
             },
-            '&:focus-visible': {
-              outline: '2.5px solid #25d366',
-              outlineOffset: 2,
-            },
+            // Focus visible global por accesibilidad
           }}
           href={waHref}
           target="_blank"

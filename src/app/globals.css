@@ -1,3 +1,37 @@
+/* Focus visible global para AgencyCard (enlaces y botones dentro de [role="region"]) */
+[role="region"] a:focus-visible,
+[role="region"] button:focus-visible {
+  outline: 2.5px solid #00d0ff !important;
+  outline-offset: 2px !important;
+  box-shadow: 0 0 0 3px rgba(0,208,255,0.18) !important;
+  z-index: 2;
+}
+/* Focus visible global para PropertyCard (enlaces y botones dentro de [role="article"]) */
+[role="article"] a:focus-visible,
+[role="article"] button:focus-visible {
+  outline: 2.5px solid #00d0ff !important;
+  outline-offset: 2px !important;
+  box-shadow: 0 0 0 3px rgba(0,208,255,0.18) !important;
+  z-index: 2;
+}
+/* Focus visible global para barra de filtros ([role="search"]) */
+[role="search"] a:focus-visible,
+[role="search"] button:focus-visible,
+[role="search"] input:focus-visible,
+[role="search"] .MuiChip-root:focus-visible {
+  outline: 2.5px solid #00d0ff !important;
+  outline-offset: 2px !important;
+  box-shadow: 0 0 0 3px rgba(0,208,255,0.18) !important;
+  z-index: 2;
+}
+/* Focus visible global para Navbar (header[role="banner"]) */
+header[role="banner"] a:focus-visible,
+header[role="banner"] button:focus-visible {
+  outline: 2.5px solid #00d0ff !important;
+  outline-offset: 2px !important;
+  box-shadow: 0 0 0 3px rgba(0,208,255,0.18) !important;
+  z-index: 2;
+}
 /* ======================= */
 /* RESET / BASE */
 /* ======================= */
@@ -115,8 +149,8 @@ button:active,
 .card {
   display: flex;
   flex-direction: column;
-  background: #161719;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #181c1f;
+  border: 1.5px solid #2b2b2b;
   overflow: hidden;
   border-radius: 12px;
   cursor: pointer;
@@ -149,7 +183,7 @@ button:active,
 
 .card__meta {
   font-size: 14px;
-  opacity: 0.8;
+  color: #e0e6eb;
 }
 
 /* ======================= */
@@ -157,7 +191,7 @@ button:active,
 /* ======================= */
 
 .btn {
-  background: #1e7971;
+  background: #0097a7;
   color: #fff;
   padding: 10px 14px;
   border-radius: 8px;
@@ -168,7 +202,7 @@ button:active,
   transition: 0.2s;
 }
 .btn:hover {
-  background: #1a6b64;
+  background: #007c91;
 }
 
 /* ======================= */
@@ -178,9 +212,9 @@ button:active,
 input,
 select,
 textarea {
-  background: #111;
+  background: #23272a;
   color: #fff;
-  border: 1px solid rgba(255,255,255,.15);
+  border: 1.5px solid #4b5563;
   padding: 10px 12px;
   border-radius: 8px;
   font-size: 15px;
@@ -189,7 +223,7 @@ textarea {
 
 label {
   font-size: 14px;
-  opacity: .85;
+  color: #e0e6eb;
   margin-bottom: 4px;
   display: block;
 }
@@ -282,7 +316,7 @@ label {
   width: 44px;
   border-radius: 50%;
   border: 1px solid rgba(255,255,255,.25);
-  background: rgba(0,0,0,.45);
+  background: #23272a;
   color: #fff;
   font-size: 24px;
   line-height: 1;
@@ -292,7 +326,7 @@ label {
   backdrop-filter: blur(2px);
 }
 .gallery__nav:hover {
-  background: rgba(0,0,0,.65);
+  background: #0097a7;
 }
 .gallery__nav--left {
   left: 12px;
@@ -309,8 +343,8 @@ label {
   padding: 6px 10px;
   border-radius: 10px;
   font-size: 12px;
-  background: rgba(0,0,0,.6);
-  border: 1px solid rgba(255,255,255,.2);
+  background: #23272a;
+  border: 1.5px solid #4b5563;
   backdrop-filter: blur(2px);
 }
 
@@ -334,7 +368,7 @@ label {
   background: #222;
 }
 .gallery__thumb.is-active {
-  border-color: #1E7971;
+  border-color: #0097a7;
 }
 
 /* MODAL */
