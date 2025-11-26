@@ -35,23 +35,23 @@ export default function Navbar() {
 
   // BOTÓN VERDE ITELSA
   const baseBtn: React.CSSProperties = {
-    background: "linear-gradient(90deg,#25d366 0%,#128c7e 100%)",
-    border: "1px solid #25d366",
-    color: "#fff",
-    padding: "7px 22px",
+    background: "linear-gradient(135deg,rgba(0,208,255,.25),rgba(0,255,225,.18))",
+    border: "1px solid rgba(0,208,255,.45)",
+    color: "#e9eef5",
+    padding: "6px 16px",
     borderRadius: 10,
     fontWeight: 700,
-    fontSize: 15,
+    fontSize: 13,
     textDecoration: "none",
     cursor: "pointer",
-    boxShadow: "0 2px 12px 0 rgba(37,211,102,.10)",
-    transition: "background .18s, box-shadow .18s, transform .12s",
+    boxShadow: "0 0 6px rgba(0,0,0,0.35)",
+    transition: "background .15s ease, transform .15s ease",
   };
 
   const hoverBtn: React.CSSProperties = {
-    background: "linear-gradient(90deg,#128c7e 0%,#25d366 100%)",
-    transform: "translateY(-2px) scale(1.03)",
-    boxShadow: "0 4px 24px 0 rgba(37,211,102,.18)",
+    background: "linear-gradient(135deg,rgba(0,208,255,.35),rgba(0,255,225,.28))",
+    transform: "translateY(-1px)",
+    boxShadow: "0 0 10px rgba(0,0,0,0.55)",
   };
 
   return (
