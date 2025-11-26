@@ -69,7 +69,7 @@ export default function Navbar() {
       <Link href="/inmuebles" style={{ display: "flex", alignItems: "center", gap: 8 }}>
         <Image
           src="/logo-itelsa-go.svg"
-          alt="ITELSA GO"
+          alt="Logo ITELSA Go, plataforma inmobiliaria"
           width={140}
           height={40}
           priority

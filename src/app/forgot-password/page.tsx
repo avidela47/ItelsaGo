@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import {
   Box,
   TextField,
@@ -9,52 +8,43 @@ import {
   Typography,
   Paper,
   Alert,
-  MenuItem,
   Link,
   CircularProgress,
 } from "@mui/material";
+import { useRouter } from "next/navigation";
 
-export default function RegisterPage() {
-  const router = useRouter();
-  const [name, setName] = useState("");
+export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [role, setRole] = useState<"user" | "agency">("user");
   const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState<{ type: "ok" | "err"; text: string } | null>(
-    null
-  );
+  const [msg, setMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
+  const router = useRouter();
 
-  // Remover scroll del body
+  // Eliminar scroll vertical del body solo en esta página
   useEffect(() => {
-    document.body.style.overflow = "hidden";
-    document.documentElement.style.overflow = "hidden";
+    document.body.style.overflowY = "hidden";
     return () => {
-      document.body.style.overflow = "";
-      document.documentElement.style.overflow = "";
+      document.body.style.overflowY = "";
     };
   }, []);
 
-  async function submit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (busy) return;
     setBusy(true);
     setMsg(null);
-
     try {
-      const res = await fetch("/api/auth/register", {
+      const res = await fetch("/api/auth/forgot-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password, role }),
+        body: JSON.stringify({ email }),
       });
       const data = await res.json();
       if (!res.ok) {
-        setMsg({ type: "err", text: data?.error || "No se pudo registrar" });
+        setMsg({ type: "err", text: data?.error || "No se pudo enviar el email" });
         setBusy(false);
         return;
       }
-      setMsg({ type: "ok", text: "Usuario creado" });
-      setTimeout(() => router.push("/login"), 600);
+      setMsg({ type: "ok", text: "Si el email existe, se envió un enlace para restablecer la contraseña." });
     } catch {
       setMsg({ type: "err", text: "Error de red" });
     } finally {
@@ -92,28 +82,14 @@ export default function RegisterPage() {
             alt="Logo ITELSA Go, plataforma inmobiliaria"
             style={{ height: 48, marginBottom: 16 }}
           />
-          <Typography variant="h5">
-            Crear usuario
-          </Typography>
+          <Typography variant="h5">Recuperar contraseña</Typography>
         </Box>
-
         {msg && (
-          <Alert
-            severity={msg.type === "ok" ? "success" : "error"}
-            sx={{ mb: 2 }}
-          >
+          <Alert severity={msg.type === "ok" ? "success" : "error"} sx={{ mb: 2 }}>
             {msg.text}
           </Alert>
         )}
-
-        <form onSubmit={submit} style={{ display: "grid", gap: 16 }}>
-          <TextField
-            label="Nombre"
-            fullWidth
-            required
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
+        <form onSubmit={handleSubmit} style={{ display: "grid", gap: 16 }} noValidate>
           <TextField
             label="Email"
             type="email"
@@ -121,29 +97,11 @@ export default function RegisterPage() {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            disabled={busy}
           />
-          <TextField
-            label="Contraseña"
-            type="password"
-            fullWidth
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-          <TextField
-            select
-            label="Rol"
-            fullWidth
-            value={role}
-            onChange={(e) => setRole(e.target.value as "user" | "agency")}
-          >
-            <MenuItem value="user">Usuario</MenuItem>
-            <MenuItem value="agency">Inmobiliaria</MenuItem>
-          </TextField>
-
           <Button
             type="submit"
-            disabled={busy}
+            disabled={busy || !email}
             variant="contained"
             sx={{
               display: 'block',
@@ -169,25 +127,16 @@ export default function RegisterPage() {
               },
             }}
           >
-            {busy ? <CircularProgress size={22} sx={{ color: '#e9eef5' }} /> : "Crear usuario"}
+            {busy ? <CircularProgress size={22} sx={{ color: '#e9eef5' }} /> : "Enviar enlace"}
           </Button>
         </form>
-
         <Box sx={{ textAlign: "center", mt: 2 }}>
           <Typography variant="body2" sx={{ opacity: 0.7 }}>
-            ¿Ya tienes cuenta?{" "}
             <Link
               href="/login"
-              sx={{
-                color: "#00d0ff",
-                textDecoration: "none",
-                fontWeight: 600,
-                "&:hover": {
-                  textDecoration: "underline",
-                },
-              }}
+              sx={{ color: "#00d0ff", textDecoration: "none", fontWeight: 600, '&:hover': { textDecoration: 'underline' } }}
             >
-              Ingresar
+              Volver al login
             </Link>
           </Typography>
         </Box>
@@ -195,4 +144,3 @@ export default function RegisterPage() {
     </main>
   );
 }
-

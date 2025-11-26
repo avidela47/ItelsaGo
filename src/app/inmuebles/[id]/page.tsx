@@ -272,13 +272,51 @@ export default function InmueblePage() {
       ...(item.rooms && { "numberOfRooms": item.rooms })
     };
 
-    let scriptTag = document.querySelector('script[type="application/ld+json"]');
+    // JSON-LD BreadcrumbList
+    const breadcrumbs = {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Inicio",
+          "item": window.location.origin + "/"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "Inmuebles",
+          "item": window.location.origin + "/inmuebles"
+        },
+        {
+          "@type": "ListItem",
+          "position": 3,
+          "name": item.title,
+          "item": url
+        }
+      ]
+    };
+
+    // Structured data script
+    let scriptTag = document.querySelector('script[type="application/ld+json"][data-structured="main"]');
     if (!scriptTag) {
       scriptTag = document.createElement('script');
       scriptTag.setAttribute('type', 'application/ld+json');
+      scriptTag.setAttribute('data-structured', 'main');
       document.head.appendChild(scriptTag);
     }
     scriptTag.textContent = JSON.stringify(structuredData);
+
+    // Breadcrumbs script
+    let bcTag = document.querySelector('script[type="application/ld+json"][data-structured="breadcrumbs"]');
+    if (!bcTag) {
+      bcTag = document.createElement('script');
+      bcTag.setAttribute('type', 'application/ld+json');
+      bcTag.setAttribute('data-structured', 'breadcrumbs');
+      document.head.appendChild(bcTag);
+    }
+    bcTag.textContent = JSON.stringify(breadcrumbs);
   }, [item]);
 
   // Imágenes seguras
@@ -429,6 +467,32 @@ export default function InmueblePage() {
     })
   };
 
+  // Breadcrumbs JSON-LD
+  const breadcrumbs = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {
+        "@type": "ListItem",
+        "position": 1,
+        "name": "Inicio",
+        "item": "https://itelsa-go.com/"
+      },
+      {
+        "@type": "ListItem",
+        "position": 2,
+        "name": "Propiedades",
+        "item": "https://itelsa-go.com/inmuebles"
+      },
+      {
+        "@type": "ListItem",
+        "position": 3,
+        "name": item.title,
+        "item": typeof window !== "undefined" ? window.location.href : ""
+      }
+    ]
+  };
+
   return (
     <main style={{ padding: "24px 16px", maxWidth: 1200, margin: "0 auto" }}>
       {/* JSON-LD para Google */}
@@ -436,7 +500,11 @@ export default function InmueblePage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
       />
-      
+      {/* Breadcrumbs JSON-LD */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbs) }}
+      />
       {/* Toolbar superior */}
       <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
         <Button size="small" onClick={() => router.back()} sx={{ textTransform: "none" }}>← Volver</Button>

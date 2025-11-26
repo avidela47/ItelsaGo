@@ -13,6 +13,8 @@ export interface IUser extends Document {
   favoriteListings?: mongoose.Types.ObjectId[];
   createdAt?: Date;
   updatedAt?: Date;
+  resetPasswordToken?: string;
+  resetPasswordExpires?: number;
 }
 
 const UserSchema = new Schema<IUser>(
@@ -31,7 +33,9 @@ const UserSchema = new Schema<IUser>(
       default: "free",
     },
     subscriptionDate: { type: Date },
-    favoriteListings: [{ type: Schema.Types.ObjectId, ref: "Listing" }],
+  favoriteListings: [{ type: Schema.Types.ObjectId, ref: "Listing" }],
+  resetPasswordToken: { type: String },
+  resetPasswordExpires: { type: Number },
   },
   {
     timestamps: true,

@@ -93,9 +93,18 @@ export async function POST(req: NextRequest) {
       lng,
     } = body;
 
-    if (!title || !location || !price || !currency || !images) {
+    if (!title || !location || !price || !currency || !images || !finalAgency) {
       return NextResponse.json(
         { error: "Faltan campos obligatorios" },
+        { status: 400 }
+      );
+    }
+
+    // Validar que la agencia exista
+    const agencyDoc = await Agency.findById(finalAgency).lean();
+    if (!agencyDoc) {
+      return NextResponse.json(
+        { error: "La inmobiliaria referenciada no existe" },
         { status: 400 }
       );
     }

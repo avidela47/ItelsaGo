@@ -1,3 +1,33 @@
+
+import { Metadata } from "next";
+export const metadata: Metadata = {
+  title: "Publicar propiedad | ITELSA Go",
+  description: "Publicá tu propiedad en ITELSA Go y llegá a miles de interesados. Fácil, rápido y seguro. Gestioná tus inmuebles desde un panel profesional.",
+  openGraph: {
+    title: "Publicar propiedad | ITELSA Go",
+    description: "Publicá tu propiedad en ITELSA Go y llegá a miles de interesados. Fácil, rápido y seguro. Gestioná tus inmuebles desde un panel profesional.",
+    url: "https://itelsa-go.com/publicar",
+    siteName: "ITELSA Go",
+    images: [
+      {
+        url: "/logo-itelsa-go.svg",
+        width: 600,
+        height: 315,
+        alt: "ITELSA Go logo"
+      }
+    ],
+    locale: "es_AR",
+    type: "website"
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Publicar propiedad | ITELSA Go",
+    description: "Publicá tu propiedad en ITELSA Go y llegá a miles de interesados. Fácil, rápido y seguro. Gestioná tus inmuebles desde un panel profesional.",
+    images: ["/logo-itelsa-go.svg"],
+    site: "@ItelsaGo"
+  }
+};
+
 "use client";
 
 import { useEffect, useState, FormEvent } from "react";
@@ -24,7 +54,11 @@ import ImageUploader from "@/components/upload/ImageUploader";
 
 type Role = "guest" | "user" | "agency" | "admin";
 type Plan = "free" | "pro" | "premium";
+
 type PropertyType = "depto" | "casa" | "lote" | "local";
+
+// Importar el tipo Item desde PropertyCard para evitar duplicidad y errores de tipo
+import type { Item } from "@/components/cards/PropertyCard";
 
 function getRoleFromCookie(): Role {
   if (typeof document === "undefined") return "guest";

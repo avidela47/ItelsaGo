@@ -1,51 +1,47 @@
+
 "use client";
-
 import { useMemo } from "react";
-import {
-  Box,
-  TextField,
-  InputAdornment,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Slider,
-  Chip,
-  IconButton,
-  Tooltip,
-  Button,
-} from "@mui/material";
+import InputAdornment from "@mui/material/InputAdornment";
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
+import Chip from "@mui/material/Chip";
+import Slider from "@mui/material/Slider";
+import Box from "@mui/material/Box";
+import TextField from "@mui/material/TextField";
+import MenuItem from "@mui/material/MenuItem";
+import Button from "@mui/material/Button";
+import Tooltip from "@mui/material/Tooltip";
+import IconButton from "@mui/material/IconButton";
 import ClearRoundedIcon from "@mui/icons-material/ClearRounded";
+import FormControl from "@mui/material/FormControl";
+import InputLabel from "@mui/material/InputLabel";
+import Select from "@mui/material/Select";
 
-export type Plan = "all" | "premium" | "pro" | "free";
-export type PropertyType = "all" | "depto" | "casa" | "lote" | "local";
-export type SortKey = "recent" | "price_asc" | "price_desc" | "rooms_desc" | "m2_desc";
-
+// Tipos principales para los filtros (copiados de page.tsx si no existen aquí)
 export type FilterState = {
   q: string;
-  sort: SortKey;
-  plan: Plan;
-  location: string;      // "all" o una ubicación
-  type: PropertyType;    // "all" o tipo
+  sort: "recent" | "price_asc" | "price_desc" | "m2_desc" | "rooms_desc";
+  plan: "all" | "premium" | "pro" | "free";
+  location: string;
+  type: "all" | "depto" | "casa" | "lote" | "local";
   price: [number, number];
-  rooms: string;         // "all" o número en string
-  m2Total: [number, number];  // Rango de m² totales
-  m2Cubiertos: [number, number];  // Rango de m² cubiertos
-  bedrooms: string;      // "all" o número en string
-  bathrooms: string;     // "all" o número en string
-  garage: string;        // "all" | "true" | "false"
+  rooms: number | "all";
+  m2Total: [number, number];
+  m2Cubiertos: [number, number];
+  bedrooms: number | "all";
+  bathrooms: number | "all";
+  garage: boolean | "all";
 };
 
-type Item = {
+export type Item = {
   _id: string;
   title: string;
   price: number;
   currency: "ARS" | "USD";
   location: string;
+  images: string[];
   rooms?: number;
   propertyType?: "depto" | "casa" | "lote" | "local";
-  agency?: { plan?: "premium" | "pro" | "sponsor" | "free" };
+  agency?: { logo?: string; plan?: "premium" | "sponsor" | "pro" | "free" };
   createdAt?: string;
   m2Total?: number;
   m2Cubiertos?: number;
@@ -53,6 +49,9 @@ type Item = {
   bathrooms?: number;
   garage?: boolean;
 };
+export type SortKey = "recent" | "price_asc" | "price_desc" | "m2_desc" | "rooms_desc";
+export type Plan = "all" | "premium" | "pro" | "free";
+export type PropertyType = "all" | "depto" | "casa" | "lote" | "local";
 
 type Props = {
   value: FilterState;
@@ -287,6 +286,14 @@ export default function FiltersBar({ value, onChange, items, onPlanesClick }: Pr
               disabled={!showReset}
               size="medium"
               color="inherit"
+              aria-label="Limpiar todos los filtros"
+              tabIndex={0}
+              sx={{
+                '&:focus-visible': {
+                  outline: '2.5px solid #00d0ff',
+                  outlineOffset: 2,
+                },
+              }}
             >
               <ClearRoundedIcon />
             </IconButton>
@@ -439,7 +446,10 @@ export default function FiltersBar({ value, onChange, items, onPlanesClick }: Pr
             labelId="garage-label"
             label="Cochera"
             value={value.garage}
-            onChange={(e) => set("garage", e.target.value)}
+            onChange={(e) => {
+              const v = e.target.value;
+              set("garage", v === "all" ? "all" : v === "true");
+            }}
           >
             <MenuItem value="all">Todas</MenuItem>
             <MenuItem value="true">Con cochera</MenuItem>
@@ -541,7 +551,7 @@ export default function FiltersBar({ value, onChange, items, onPlanesClick }: Pr
           )}
           {value.garage !== "all" && (
             <Chip
-              label={value.garage === "true" ? "Con cochera" : "Sin cochera"}
+              label={value.garage === true ? "Con cochera" : value.garage === false ? "Sin cochera" : "Cualquier cochera"}
               onDelete={() => set("garage", "all")}
               size="small"
               color="primary"

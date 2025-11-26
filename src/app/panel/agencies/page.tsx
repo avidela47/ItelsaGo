@@ -11,6 +11,8 @@ import TableBody from "@mui/material/TableBody";
 import TableCell from "@mui/material/TableCell";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
+import useMediaQuery from "@mui/material/useMediaQuery";
+import AgencyCard from "@/components/cards/AgencyCard";
 import Tooltip from "@mui/material/Tooltip";
 import InputAdornment from "@mui/material/InputAdornment";
 import SearchIcon from "@mui/icons-material/Search";
@@ -48,6 +50,7 @@ type Agency = {
 };
 
 export default function AgenciesPage() {
+  const isMobile = useMediaQuery('(max-width:1024px)');
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: "success" | "error" }>({ open: false, message: "", severity: "success" });
   const [agencies, setAgencies] = useState<Agency[]>([]);
   const [loading, setLoading] = useState(false);
@@ -138,7 +141,37 @@ export default function AgenciesPage() {
     setForm({ name: "", email: "", phone: "", whatsapp: "", plan: "free", logo: "" });
     setOpenDialog(true);
   };
-  const handleSave = () => {};
+  function isValidEmail(email: string) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  }
+
+  const handleSave = async () => {
+    // Validación frontend
+    if (!form.name || !form.name.trim()) {
+      setFormError("El nombre es obligatorio");
+      return;
+    }
+    if (!form.email || !form.email.trim()) {
+      setFormError("El email es obligatorio");
+      return;
+    }
+    if (!isValidEmail(form.email)) {
+      setFormError("El email no es válido");
+      return;
+    }
+    setFormError(null);
+    setSaving(true);
+    try {
+      // Aquí deberías llamar a la API para guardar (POST o PATCH)
+      // ...
+      setOpenDialog(false);
+      setSnackbar({ open: true, message: editingAgency ? "Inmobiliaria actualizada" : "Inmobiliaria creada", severity: "success" });
+    } catch (err: any) {
+      setFormError(err.message || "Error al guardar inmobiliaria");
+    } finally {
+      setSaving(false);
+    }
+  };
   const handleChangePlan = () => {};
   function getPlanColor(plan: string) {
     if (plan === "premium") return "#D9A441";
@@ -148,30 +181,39 @@ export default function AgenciesPage() {
 
   return (
     <>
-      <Box sx={{ mb: 3, display: "flex", alignItems: "center", gap: 2 }}>
+      <Box sx={{ mb: 3, display: "flex", alignItems: "center", gap: 2, flexWrap: { xs: 'wrap', sm: 'nowrap' } }}>
         <BusinessIcon sx={{ fontSize: 32 }} />
-        <Typography variant="h5" fontWeight={700}>Inmobiliarias</Typography>
+        <Typography variant="h5" fontWeight={700} sx={{ fontSize: { xs: 20, sm: 24 } }}>Inmobiliarias</Typography>
         <Button
           variant="contained"
           startIcon={<AddIcon />}
           onClick={handleNew}
-          sx={{ ml: "auto" }}
+          sx={{ ml: { xs: 0, sm: "auto" }, width: { xs: '100%', sm: 'auto' }, mt: { xs: 2, sm: 0 } }}
         >
           Nueva Inmobiliaria
         </Button>
       </Box>
       {loading && <Box sx={{ display: "flex", justifyContent: "center", mt: 6 }}><CircularProgress /></Box>}
       {error && <Alert severity="error" sx={{ my: 4 }}>{error}</Alert>}
-      {!loading && !error && agencies.length > 0 && (
+      {!loading && !error && (
         <Box>
           {/* Barra de búsqueda y filtros */}
-          <Box sx={{ display: 'flex', gap: 2, mb: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+          <Box
+            sx={{
+              display: 'flex',
+              gap: 2,
+              mb: 2,
+              alignItems: { xs: 'stretch', sm: 'center' },
+              flexDirection: { xs: 'column', sm: 'row' },
+              flexWrap: { xs: 'nowrap', sm: 'wrap' },
+            }}
+          >
             <TextField
               placeholder="Buscar por nombre o email"
               value={search}
               onChange={e => setSearch(e.target.value)}
               size="small"
-              sx={{ minWidth: 220 }}
+              sx={{ minWidth: { xs: '100%', sm: 220 } }}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
@@ -180,7 +222,7 @@ export default function AgenciesPage() {
                 ),
               }}
             />
-            <FormControl size="small" sx={{ minWidth: 140 }}>
+            <FormControl size="small" sx={{ minWidth: { xs: '100%', sm: 140 } }}>
               <InputLabel>Plan</InputLabel>
               <Select
                 value={filterPlan}
@@ -193,7 +235,7 @@ export default function AgenciesPage() {
                 <MenuItem value="premium">PREMIUM</MenuItem>
               </Select>
             </FormControl>
-            <FormControl size="small" sx={{ minWidth: 140 }}>
+            <FormControl size="small" sx={{ minWidth: { xs: '100%', sm: 140 } }}>
               <InputLabel>Estado</InputLabel>
               <Select
                 value={filterStatus}
@@ -206,126 +248,170 @@ export default function AgenciesPage() {
               </Select>
             </FormControl>
           </Box>
-          <Box sx={{ overflowX: "auto", borderRadius: 4, boxShadow: 3, bgcolor: '#f7fafd', p: 1 }}>
-            <Table sx={{ minWidth: 900, borderRadius: 4, overflow: 'hidden' }}>
-              <TableHead>
-                <TableRow sx={{ boxShadow: 1, bgcolor: '#f5f6fa', position: 'sticky', top: 0, zIndex: 1 }}>
-                  <TableCell sx={{ minWidth: 80, color: '#222', fontWeight: 700, fontSize: 15, borderTopLeftRadius: 12 }}>Logo</TableCell>
-                  <TableCell sx={{ minWidth: 150, color: '#222', fontWeight: 700, fontSize: 15 }}>Nombre</TableCell>
-                  <TableCell sx={{ minWidth: 200, color: '#222', fontWeight: 700, fontSize: 15 }}>Email</TableCell>
-                  <TableCell sx={{ minWidth: 130, color: '#222', fontWeight: 700, fontSize: 15 }}>Teléfono</TableCell>
-                  <TableCell sx={{ minWidth: 130, color: '#222', fontWeight: 700, fontSize: 15 }}>WhatsApp</TableCell>
-                  <TableCell sx={{ minWidth: 100, color: '#222', fontWeight: 700, fontSize: 15 }}>Plan</TableCell>
-                  <TableCell align="right" sx={{ minWidth: 140, color: '#222', fontWeight: 700, fontSize: 15, borderTopRightRadius: 12 }}>Acciones</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {paginatedAgencies.map((agency, idx) => (
-                  <TableRow
-                    key={agency._id}
-                    sx={{
-                      bgcolor: agency.status === 'paused'
-                        ? '#ffeaea'
-                        : idx % 2 === 0
-                          ? '#fcfcfc'
-                          : '#f3f6fa',
-                      transition: 'background 0.2s',
-                      '&:hover': { bgcolor: agency.status === 'paused' ? '#ffd6d6' : '#e3f2fd' },
-                    }}
-                  >
-                    <TableCell sx={{ color: '#222', py: 2 }}>
-                      {agency.logo ? (
-                        <img
-                          src={agency.logo}
-                          alt={agency.name}
-                          style={{ width: 44, height: 44, objectFit: "contain", borderRadius: 8, background: '#fff', border: '1px solid #eee', boxShadow: '0 1px 4px #0001' }}
-                        />
-                      ) : (
-                        <BusinessIcon sx={{ fontSize: 40, opacity: 0.3 }} />
-                      )}
-                    </TableCell>
-                    <TableCell sx={{ color: '#222', fontWeight: 500 }}>{agency.name}</TableCell>
-                    <TableCell sx={{ color: '#222' }}>{agency.email || "-"}</TableCell>
-                    <TableCell sx={{ color: '#222' }}>{agency.phone || "-"}</TableCell>
-                    <TableCell sx={{ color: '#222' }}>{agency.whatsapp || "-"}</TableCell>
-                    <TableCell>
-                      <Chip
-                        label={agency.plan?.toUpperCase() || "FREE"}
-                        size="small"
-                        onClick={() => handleOpenPlanDialog(agency)}
-                        sx={{
-                          bgcolor: getPlanColor(agency.plan || "free"),
-                          color: "#fff",
-                          fontWeight: 700,
-                          fontSize: 13,
-                          px: 1.5,
-                          cursor: "pointer",
-                          borderRadius: 2,
-                          letterSpacing: 1,
-                          boxShadow: '0 1px 4px #0001',
-                          '&:hover': {
-                            opacity: 0.8,
-                          },
-                        }}
-                      />
-                    </TableCell>
-                    <TableCell align="right">
-                      <Box sx={{ display: "flex", gap: 1, justifyContent: "flex-end", alignItems: 'center' }}>
-                        <Chip
-                          label={agency.status === 'paused' ? 'PAUSADA' : 'ACTIVA'}
-                          size="small"
-                          sx={{
-                            bgcolor: agency.status === 'paused' ? '#ffcdd2' : '#e8f5e9',
-                            color: agency.status === 'paused' ? '#b71c1c' : '#388e3c',
-                            fontWeight: 700,
-                            fontSize: 12,
-                            px: 1.2,
-                            borderRadius: 2,
-                            mr: 1
-                          }}
-                        />
-                        <Tooltip title="Editar" arrow>
-                          <IconButton aria-label="Editar" size="small" onClick={() => handleEdit(agency)} sx={{ color: '#1976d2', bgcolor: '#e3f0fd', '&:hover': { bgcolor: '#bbdefb' } }}>
-                            <EditIcon />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title={agency.status === "paused" ? "Reanudar" : "Pausar"} arrow>
-                          <IconButton
-                            aria-label={agency.status === "paused" ? "Reanudar" : "Pausar"}
-                            size="small"
-                            onClick={() => handleTogglePause(agency)}
+          {filteredAgencies.length === 0 ? (
+            <Box sx={{ textAlign: 'center', py: 8, color: '#888', fontSize: 18 }}>
+              <BusinessIcon sx={{ fontSize: 60, opacity: 0.15, mb: 2 }} />
+              <Typography variant="h6" sx={{ mb: 1 }}>
+                No hay inmobiliarias que coincidan con tu búsqueda
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Prueba ajustando los filtros o la búsqueda.
+              </Typography>
+            </Box>
+          ) : (
+            <>
+              {isMobile ? (
+                <Box>
+                  {paginatedAgencies.map((agency) => (
+                    <AgencyCard
+                      key={agency._id}
+                      agency={agency}
+                      onEdit={() => handleEdit(agency)}
+                      onDelete={() => handleDelete(agency)}
+                      onTogglePause={() => handleTogglePause(agency)}
+                      onChangePlan={() => handleOpenPlanDialog(agency)}
+                    />
+                  ))}
+                </Box>
+              ) : (
+                <>
+                  <Box sx={{
+                    overflowX: "auto",
+                    borderRadius: 4,
+                    boxShadow: 3,
+                    bgcolor: '#f7fafd',
+                    p: { xs: 0.5, sm: 1 },
+                    WebkitOverflowScrolling: 'touch',
+                    maxWidth: '100vw',
+                  }}>
+                    <Table sx={{
+                      minWidth: 900,
+                      borderRadius: 4,
+                      overflow: 'hidden',
+                      fontSize: { xs: 13, sm: 15 },
+                    }}>
+                      <TableHead>
+                        <TableRow sx={{ boxShadow: 1, bgcolor: '#f5f6fa', position: 'sticky', top: 0, zIndex: 1 }}>
+                          <TableCell sx={{ minWidth: 80, color: '#222', fontWeight: 700, fontSize: { xs: 13, sm: 15 }, borderTopLeftRadius: 12 }}>Logo</TableCell>
+                          <TableCell sx={{ minWidth: 150, color: '#222', fontWeight: 700, fontSize: { xs: 13, sm: 15 } }}>Nombre</TableCell>
+                          <TableCell sx={{ minWidth: 200, color: '#222', fontWeight: 700, fontSize: { xs: 13, sm: 15 } }}>Email</TableCell>
+                          <TableCell sx={{ minWidth: 130, color: '#222', fontWeight: 700, fontSize: { xs: 13, sm: 15 } }}>Teléfono</TableCell>
+                          <TableCell sx={{ minWidth: 130, color: '#222', fontWeight: 700, fontSize: { xs: 13, sm: 15 } }}>WhatsApp</TableCell>
+                          <TableCell sx={{ minWidth: 100, color: '#222', fontWeight: 700, fontSize: { xs: 13, sm: 15 } }}>Plan</TableCell>
+                          <TableCell align="right" sx={{ minWidth: 140, color: '#222', fontWeight: 700, fontSize: { xs: 13, sm: 15 }, borderTopRightRadius: 12 }}>Acciones</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {paginatedAgencies.map((agency, idx) => (
+                          <TableRow
+                            key={agency._id}
                             sx={{
-                              color: agency.status === 'paused' ? '#388e3c' : '#fbc02d',
-                              bgcolor: agency.status === 'paused' ? '#e8f5e9' : '#fffde7',
-                              '&:hover': { bgcolor: agency.status === 'paused' ? '#c8e6c9' : '#fff9c4' }
+                              bgcolor: agency.status === 'paused'
+                                ? '#ffeaea'
+                                : idx % 2 === 0
+                                  ? '#fcfcfc'
+                                  : '#f3f6fa',
+                              transition: 'background 0.2s',
+                              '&:hover': { bgcolor: agency.status === 'paused' ? '#ffd6d6' : '#e3f2fd' },
                             }}
                           >
-                            {agency.status === "paused" ? <PlayArrowIcon /> : <PauseIcon />}
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Eliminar" arrow>
-                          <IconButton aria-label="Eliminar" size="small" onClick={() => handleDelete(agency)} sx={{ color: '#d32f2f', bgcolor: '#ffebee', '&:hover': { bgcolor: '#ffcdd2' } }}>
-                            <DeleteIcon />
-                          </IconButton>
-                        </Tooltip>
-                      </Box>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </Box>
-          <TablePagination
-            component="div"
-            count={filteredAgencies.length}
-            page={page}
-            onPageChange={handleChangePage}
-            rowsPerPage={rowsPerPage}
-            onRowsPerPageChange={handleChangeRowsPerPage}
-            rowsPerPageOptions={[5, 10, 25, 50]}
-            labelRowsPerPage="Filas por página"
-            sx={{ bgcolor: '#f7fafd', borderBottomLeftRadius: 4, borderBottomRightRadius: 4 }}
-          />
+                            <TableCell sx={{ color: '#222', py: { xs: 1, sm: 2 } }}>
+                              {agency.logo ? (
+                                <img
+                                  src={agency.logo}
+                                  alt={agency.name}
+                                  style={{ width: 44, height: 44, objectFit: "contain", borderRadius: 8, background: '#fff', border: '1px solid #eee', boxShadow: '0 1px 4px #0001' }}
+                                />
+                              ) : (
+                                <BusinessIcon sx={{ fontSize: 40, opacity: 0.3 }} />
+                              )}
+                            </TableCell>
+                            <TableCell sx={{ color: '#222', fontWeight: 500, maxWidth: { xs: 120, sm: 'none' }, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{agency.name}</TableCell>
+                            <TableCell sx={{ color: '#222', maxWidth: { xs: 120, sm: 'none' }, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{agency.email || "-"}</TableCell>
+                            <TableCell sx={{ color: '#222', maxWidth: { xs: 90, sm: 'none' }, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{agency.phone || "-"}</TableCell>
+                            <TableCell sx={{ color: '#222', maxWidth: { xs: 90, sm: 'none' }, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{agency.whatsapp || "-"}</TableCell>
+                            <TableCell>
+                              <Chip
+                                label={agency.plan?.toUpperCase() || "FREE"}
+                                size="small"
+                                onClick={() => handleOpenPlanDialog(agency)}
+                                sx={{
+                                  bgcolor: getPlanColor(agency.plan || "free"),
+                                  color: "#fff",
+                                  fontWeight: 700,
+                                  fontSize: 13,
+                                  px: 1.5,
+                                  cursor: "pointer",
+                                  borderRadius: 2,
+                                  letterSpacing: 1,
+                                  boxShadow: '0 1px 4px #0001',
+                                  '&:hover': {
+                                    opacity: 0.8,
+                                  },
+                                }}
+                              />
+                            </TableCell>
+                            <TableCell align="right">
+                              <Box sx={{ display: "flex", gap: { xs: 0.5, sm: 1 }, justifyContent: "flex-end", alignItems: 'center' }}>
+                                <Chip
+                                  label={agency.status === 'paused' ? 'PAUSADA' : 'ACTIVA'}
+                                  size="small"
+                                  sx={{
+                                    bgcolor: agency.status === 'paused' ? '#ffcdd2' : '#e8f5e9',
+                                    color: agency.status === 'paused' ? '#b71c1c' : '#388e3c',
+                                    fontWeight: 700,
+                                    fontSize: 12,
+                                    px: 1.2,
+                                    borderRadius: 2,
+                                    mr: 1
+                                  }}
+                                />
+                                <Tooltip title="Editar" arrow>
+                                  <IconButton aria-label="Editar" size="small" onClick={() => handleEdit(agency)} sx={{ color: '#1976d2', bgcolor: '#e3f0fd', '&:hover': { bgcolor: '#bbdefb' } }}>
+                                    <EditIcon />
+                                  </IconButton>
+                                </Tooltip>
+                                <Tooltip title={agency.status === "paused" ? "Reanudar" : "Pausar"} arrow>
+                                  <IconButton
+                                    aria-label={agency.status === "paused" ? "Reanudar" : "Pausar"}
+                                    size="small"
+                                    onClick={() => handleTogglePause(agency)}
+                                    sx={{
+                                      color: agency.status === 'paused' ? '#388e3c' : '#fbc02d',
+                                      bgcolor: agency.status === 'paused' ? '#e8f5e9' : '#fffde7',
+                                      '&:hover': { bgcolor: agency.status === 'paused' ? '#c8e6c9' : '#fff9c4' }
+                                    }}
+                                  >
+                                    {agency.status === "paused" ? <PlayArrowIcon /> : <PauseIcon />}
+                                  </IconButton>
+                                </Tooltip>
+                                <Tooltip title="Eliminar" arrow>
+                                  <IconButton aria-label="Eliminar" size="small" onClick={() => handleDelete(agency)} sx={{ color: '#d32f2f', bgcolor: '#ffebee', '&:hover': { bgcolor: '#ffcdd2' } }}>
+                                    <DeleteIcon />
+                                  </IconButton>
+                                </Tooltip>
+                              </Box>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </Box>
+                  <TablePagination
+                    component="div"
+                    count={filteredAgencies.length}
+                    page={page}
+                    onPageChange={handleChangePage}
+                    rowsPerPage={rowsPerPage}
+                    onRowsPerPageChange={handleChangeRowsPerPage}
+                    rowsPerPageOptions={[5, 10, 25, 50]}
+                    labelRowsPerPage="Filas por página"
+                    sx={{ bgcolor: '#f7fafd', borderBottomLeftRadius: 4, borderBottomRightRadius: 4 }}
+                  />
+                </>
+              )}
+            </>
+          )}
         </Box>
       )}
 

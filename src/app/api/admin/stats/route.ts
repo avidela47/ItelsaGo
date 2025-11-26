@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 import { dbConnect } from "@/lib/mongo";
 import Listing from "@/models/Listing";
 import Agency from "@/models/Agency";
@@ -11,7 +12,11 @@ import User from "@/models/User";
  * - Total de usuarios por rol
  * - Últimas 10 propiedades creadas
  */
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const cookieRole = req.cookies.get("role")?.value || null;
+  if (cookieRole !== "admin") {
+    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  }
   try {
     await dbConnect();
 
