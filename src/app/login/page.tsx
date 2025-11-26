@@ -12,6 +12,7 @@ import {
   FormControlLabel,
   Switch,
   Link,
+  CircularProgress,
 } from "@mui/material";
 
 export default function LoginPage() {
@@ -164,26 +165,27 @@ export default function LoginPage() {
               display: 'block',
               mx: 'auto',
               fontWeight: 700,
-              fontSize: 17,
-              py: 1.3,
-              px: 5,
+              fontSize: 15,
+              py: 1.1,
+              px: 4,
               borderRadius: 2.5,
-              boxShadow: '0 2px 12px 0 rgba(37,211,102,.10)',
-              background: 'linear-gradient(90deg,#25d366 0%,#128c7e 100%)',
-              color: '#fff',
-              transition: 'background .18s, box-shadow .18s, transform .12s',
+              background: 'linear-gradient(135deg,rgba(0,208,255,.25),rgba(0,255,225,.18))',
+              border: '1px solid rgba(0,208,255,.45)',
+              color: '#e9eef5',
+              boxShadow: '0 0 6px rgba(0,0,0,0.35)',
+              transition: 'background .15s ease, transform .15s ease',
               '&:hover': {
-                background: 'linear-gradient(90deg,#128c7e 0%,#25d366 100%)',
-                boxShadow: '0 4px 24px 0 rgba(37,211,102,.18)',
-                transform: 'translateY(-2px) scale(1.03)',
+                background: 'linear-gradient(135deg,rgba(0,208,255,.35),rgba(0,255,225,.28))',
+                transform: 'translateY(-1px)',
+                boxShadow: '0 0 10px rgba(0,0,0,0.55)',
               },
               '&:focus': {
-                outline: '2px solid #25d366',
+                outline: '2px solid #00d0ff',
                 outlineOffset: 2,
               },
             }}
           >
-            {busy ? <CircularProgress size={22} sx={{ color: '#fff' }} /> : inviteMode ? "Entrar como invitado" : "Iniciar sesión"}
+            {busy ? <CircularProgress size={22} sx={{ color: '#e9eef5' }} /> : inviteMode ? "Entrar como invitado" : "Iniciar sesión"}
           </Button>
         </form>
 
