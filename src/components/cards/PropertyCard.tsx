@@ -17,36 +17,30 @@ type Item = {
   location: string;
   images: string[];
   rooms?: number;
-  propertyType?: string;
-  operationType?: string;
-  m2Total?: number;
-  m2Cubiertos?: number;
-  bathrooms?: number;
-  bedrooms?: number;
-  garage?: boolean;
+  propertyType?: "depto" | "casa" | "lote" | "local";
   agency?: { logo?: string; plan?: Plan; whatsapp?: string };
   createdAt?: string;
+  m2Total?: number;
+  m2Cubiertos?: number;
+  bedrooms?: number;
+  bathrooms?: number;
+  garage?: boolean;
 };
 
-function money(n: number, currency: string) {
-  try {
-    return new Intl.NumberFormat("es-AR", {
-      style: "currency",
-      currency: currency === "USD" ? "USD" : "ARS",
-      maximumFractionDigits: 0,
-    }).format(n);
-  } catch {
-    return `${currency} ${n.toLocaleString("es-AR")}`;
-  }
+// Utilidad local para formatear dinero si no existe import
+function money(price: number, currency: "ARS" | "USD") {
+  const p = new Intl.NumberFormat("es-AR").format(price || 0);
+  return `${currency === "USD" ? "USD" : "ARS"} ${p}`;
 }
 
-export default function PropertyCard({ item }: { item: Item }) {
+interface PropertyCardProps {
+  item: Item;
+}
+
+export default function PropertyCard({ item }: PropertyCardProps) {
   const img = item.images?.[0] || "/placeholder.jpg";
   const url = `/inmuebles/${item._id}`;
-
-  // Normalizar sponsor -> pro para compatibilidad
   const plan = item.agency?.plan === "sponsor" ? "pro" : item.agency?.plan;
-
   const waHref = (() => {
     const number = item?.agency?.whatsapp?.replace(/[^\d+]/g, "") || "";
     const base = number ? `https://wa.me/${number}` : `https://wa.me/`;
@@ -91,7 +85,7 @@ export default function PropertyCard({ item }: { item: Item }) {
       <Box sx={{ position: "relative", width: "100%", aspectRatio: "16/10", overflow: "hidden" }}>
         <img
           src={img}
-          alt={item.title}
+          alt={`Foto principal de ${item.title} en ${item.location}`}
           style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
         />
 
@@ -135,7 +129,7 @@ export default function PropertyCard({ item }: { item: Item }) {
           >
             <img
               src={item.agency.logo}
-              alt="logo-inmobiliaria"
+              alt={`Logo de la inmobiliaria ${item.agency.logo}`}
               style={{ width: 30, height: 30, objectFit: "contain" }}
             />
           </Box>
@@ -198,22 +192,28 @@ export default function PropertyCard({ item }: { item: Item }) {
           size="small"
           startIcon={<WhatsAppIcon />}
           sx={{
-            background: "linear-gradient(135deg,rgba(0,208,255,.25),rgba(0,255,225,.18))",
-            border: "1px solid rgba(0,208,255,.45)",
-            color: "#e9eef5",
-            borderRadius: 2.5,
+            mt: 1.2,
+            fontWeight: 700,
+            fontSize: 15,
+            borderRadius: 2,
+            background: "linear-gradient(90deg,#25d366 0%,#128c7e 100%)",
+            color: "#fff",
+            boxShadow: "0 2px 8px 0 rgba(37,211,102,.10)",
             textTransform: "none",
-            fontWeight: 800,
-            transition: "background .15s ease, transform .15s ease",
-            "&:hover": {
-              background: "linear-gradient(135deg,rgba(0,208,255,.35),rgba(0,255,225,.28))",
-              transform: "translateY(-1px)",
+            transition: "background .18s, box-shadow .18s, transform .12s",
+            '&:hover': {
+              background: "linear-gradient(90deg,#128c7e 0%,#25d366 100%)",
+              boxShadow: "0 4px 16px 0 rgba(37,211,102,.18)",
+              transform: "translateY(-2px) scale(1.03)",
+            },
+            '&:focus': {
+              outline: '2px solid #25d366',
+              outlineOffset: 2,
             },
           }}
-          onClick={(e) => {
-            e.preventDefault();
-            window.open(waHref, "_blank");
-          }}
+          href={waHref}
+          target="_blank"
+          rel="noopener noreferrer"
         >
           WhatsApp
         </Button>
