@@ -140,8 +140,31 @@ export default function RegisterPage() {
             <MenuItem value="agency">Inmobiliaria</MenuItem>
           </TextField>
 
-          <Button type="submit" disabled={busy} variant="contained" fullWidth>
-            {busy ? "Creando..." : "Crear usuario"}
+          <Button
+            type="submit"
+            disabled={busy}
+            variant="contained"
+            fullWidth
+            sx={{
+              fontWeight: 700,
+              fontSize: 17,
+              py: 1.3,
+              borderRadius: 2.5,
+              boxShadow: '0 2px 12px 0 rgba(0,208,255,.10)',
+              background: 'linear-gradient(90deg, #00d0ff 0%, #2a6ebb 100%)',
+              transition: 'background .18s, box-shadow .18s, transform .12s',
+              '&:hover': {
+                background: 'linear-gradient(90deg, #2a6ebb 0%, #00d0ff 100%)',
+                boxShadow: '0 4px 24px 0 rgba(0,208,255,.18)',
+                transform: 'translateY(-2px) scale(1.03)',
+              },
+              '&:focus': {
+                outline: '2px solid #00d0ff',
+                outlineOffset: 2,
+              },
+            }}
+          >
+            {busy ? <CircularProgress size={22} sx={{ color: '#fff' }} /> : "Crear usuario"}
           </Button>
         </form>
 
