@@ -88,7 +88,7 @@ export default function RegisterPage() {
         <Box sx={{ textAlign: "center", mb: 3 }}>
           <img
             src="/logo-itelsa-go.svg"
-            alt="ITELSA Go"
+            alt="Logo ITELSA Go, plataforma inmobiliaria"
             style={{ height: 48, marginBottom: 16 }}
           />
           <Typography variant="h5">

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 import { dbConnect } from "@/lib/mongo";
 import Listing from "@/models/Listing";
 import Agency from "@/models/Agency";
@@ -17,7 +18,11 @@ import { PLAN_PRICES } from "@/lib/planPrices";
 // Valores actuales de los planes (USD): PRO = 100, PREMIUM = 500
 // Precios importados desde src/lib/planPrices.ts
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const cookieRole = req.cookies.get("role")?.value || null;
+  if (cookieRole !== "admin") {
+    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  }
   try {
     await dbConnect();
 

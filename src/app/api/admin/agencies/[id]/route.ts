@@ -2,12 +2,21 @@ import { NextRequest, NextResponse } from "next/server";
 import { dbConnect } from "@/lib/mongo";
 import Agency from "@/models/Agency";
 
+function sanitize(str: string) {
+  return String(str).replace(/[<>"]+/g, "");
+}
+
 // PATCH: Actualizar inmobiliaria
 export async function PATCH(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
+    // Validar rol admin
+  const cookieRole = req.cookies.get("role")?.value || null;
+    if (cookieRole !== "admin") {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    }
     await dbConnect();
     const { id } = params;
     const body = await req.json();
@@ -62,6 +71,11 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
+    // Validar rol admin
+  const cookieRole = req.cookies.get("role")?.value || null;
+    if (cookieRole !== "admin") {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    }
     await dbConnect();
     const { id } = params;
     

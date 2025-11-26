@@ -1,18 +1,31 @@
+
 import { NextRequest, NextResponse } from "next/server";
 import { dbConnect } from "@/lib/mongo";
 import Agency from "@/models/Agency";
 import { Resend } from "resend";
+
+function isValidEmail(email: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+function sanitize(str: string) {
+  return String(str).replace(/[<>"'`]/g, "");
+}
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 export const dynamic = "force-dynamic";
 
 // GET: Listar todas las inmobiliarias
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    // Validar rol admin
+  const cookieRole = req.cookies.get("role")?.value || null;
+    if (cookieRole !== "admin") {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    }
     await dbConnect();
     const agencies = await Agency.find({}).sort({ createdAt: -1 });
-    
     return NextResponse.json({
       ok: true,
       agencies,
@@ -29,38 +42,65 @@ export async function GET() {
 // POST: Crear nueva inmobiliaria
 export async function POST(req: NextRequest) {
   try {
+    // Validar rol admin
+  const cookieRole = req.cookies.get("role")?.value || null;
+    if (cookieRole !== "admin") {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    }
     await dbConnect();
     const body = await req.json();
     
     const { name, email, phone, whatsapp, plan, logo } = body;
-    
-    // Validaciones
-    if (!name) {
+
+    // Validaciones y sanitización
+    if (!name || typeof name !== "string" || !name.trim()) {
       return NextResponse.json(
         { error: "El nombre es obligatorio" },
         { status: 400 }
       );
     }
-    
-    if (!email) {
+    if (!email || typeof email !== "string" || !email.trim()) {
       return NextResponse.json(
         { error: "El email es obligatorio" },
         { status: 400 }
       );
     }
-    
+    if (!isValidEmail(email)) {
+      return NextResponse.json(
+        { error: "El email no es válido" },
+        { status: 400 }
+      );
+    }
+
+    // Sanitizar inputs
+    const safeName = sanitize(name.trim());
+    const safeEmail = sanitize(email.trim().toLowerCase());
+    const safePhone = phone ? sanitize(phone) : "";
+    const safeWhatsapp = whatsapp ? sanitize(whatsapp) : safePhone;
+    const safePlan = ["free", "pro", "premium"].includes(plan) ? plan : "free";
+    const safeLogo = logo ? sanitize(logo) : "";
+
+    // Prevenir duplicados de email
+    const existing = await Agency.findOne({ email: safeEmail });
+    if (existing) {
+      return NextResponse.json(
+        { error: "Ya existe una inmobiliaria con ese email" },
+        { status: 409 }
+      );
+    }
+
     // Crear inmobiliaria
     const agency = await Agency.create({
-      name,
-      email,
-      phone: phone || "",
-      whatsapp: whatsapp || phone || "",
-      plan: plan || "free",
-      logo: logo || "",
+      name: safeName,
+      email: safeEmail,
+      phone: safePhone,
+      whatsapp: safeWhatsapp,
+      plan: safePlan,
+      logo: safeLogo,
     });
     
     console.log("✅ Inmobiliaria creada:", agency.name);
-    
+
     // Enviar email de bienvenida
     console.log("📧 Intentando enviar email de bienvenida a:", email);
     console.log("🔑 RESEND_API_KEY configurada:", !!process.env.RESEND_API_KEY);
@@ -75,12 +115,12 @@ export async function POST(req: NextRequest) {
               <style>
                 body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
                 .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-                .header { background: #2A6EBB; color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+                .header { background: #4CAF50; color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
                 .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 8px 8px; }
-                .box { background: white; padding: 20px; margin: 20px 0; border-radius: 8px; border-left: 4px solid #2A6EBB; }
+                .box { background: white; padding: 20px; margin: 20px 0; border-radius: 8px; border-left: 4px solid #4CAF50; }
                 .footer { text-align: center; margin-top: 30px; font-size: 12px; color: #666; }
-                .button { display: inline-block; background: #2A6EBB; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 20px; }
-                h2 { color: #2A6EBB; }
+                .button { display: inline-block; background: #4CAF50; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 20px; }
+                h2 { color: #4CAF50; }
               </style>
             </head>
             <body>
@@ -128,10 +168,11 @@ export async function POST(req: NextRequest) {
         `;
 
         const result = await resend.emails.send({
-          from: "ITELSA Go <onboarding@resend.dev>",
+          from: "ITELSA Go <no-reply@itelsago.com>",
           to: [email],
           subject: `¡Bienvenido a ITELSA Go! - ${name}`,
           html: htmlContent,
+          replyTo: "soporte@itelsago.com"
         });
 
         console.log("📨 Respuesta de Resend:", JSON.stringify(result, null, 2));

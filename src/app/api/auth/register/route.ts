@@ -11,7 +11,11 @@ import User from "@/models/User";
 export async function POST(req: NextRequest) {
   try {
     await dbConnect();
-    const { name, email, password, role } = await req.json();
+    let { name, email, password, role } = await req.json();
+
+    // Sanitizar y normalizar
+    name = typeof name === "string" ? name.trim() : "";
+    email = typeof email === "string" ? email.trim().toLowerCase() : "";
 
     if (!name || !email || !password) {
       return NextResponse.json(
@@ -20,9 +24,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Prevenir duplicados con email normalizado
     const exists = await User.findOne({ email });
     if (exists) {
-      return NextResponse.json({ error: "El email ya está registrado" }, { status: 400 });
+      return NextResponse.json({ error: "El email ya está registrado" }, { status: 409 });
     }
 
     // El rol final será el que se envía (nunca admin desde el formulario)

@@ -103,7 +103,7 @@ export default function LoginPage() {
         <Box sx={{ textAlign: "center", mb: 3 }}>
           <img
             src="/logo-itelsa-go.svg"
-            alt="ITELSA Go"
+            alt="Logo ITELSA Go, plataforma inmobiliaria"
             style={{ height: 48, marginBottom: 16 }}
           />
           <Typography variant="h5">
@@ -176,6 +176,21 @@ export default function LoginPage() {
               }}
             >
               Regístrate
+            </Link>
+          </Typography>
+          <Typography variant="body2" sx={{ mt: 1, opacity: 0.7 }}>
+            <Link
+              href="/forgot-password"
+              sx={{
+                color: "#00d0ff",
+                textDecoration: "none",
+                fontWeight: 600,
+                "&:hover": {
+                  textDecoration: "underline",
+                },
+              }}
+            >
+              ¿Olvidaste tu contraseña?
             </Link>
           </Typography>
         </Box>
