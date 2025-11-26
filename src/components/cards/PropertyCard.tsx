@@ -9,7 +9,7 @@ import FavButton from "@/components/cards/FavButton";
 
 type Plan = "premium" | "pro" | "sponsor" | "free";
 
-type Item = {
+export type Item = {
   _id: string;
   title: string;
   price: number;
@@ -25,6 +25,7 @@ type Item = {
   bedrooms?: number;
   bathrooms?: number;
   garage?: boolean;
+  operationType?: "venta" | "alquiler" | "temporario";
 };
 
 // Utilidad local para formatear dinero si no existe import
@@ -206,14 +207,16 @@ export default function PropertyCard({ item }: PropertyCardProps) {
               boxShadow: "0 4px 16px 0 rgba(37,211,102,.18)",
               transform: "translateY(-2px) scale(1.03)",
             },
-            '&:focus': {
-              outline: '2px solid #25d366',
+            '&:focus-visible': {
+              outline: '2.5px solid #25d366',
               outlineOffset: 2,
             },
           }}
           href={waHref}
           target="_blank"
           rel="noopener noreferrer"
+          aria-label={`Contactar por WhatsApp sobre ${item.title} en ${item.location}`}
+          tabIndex={0}
         >
           WhatsApp
         </Button>

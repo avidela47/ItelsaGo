@@ -1,3 +1,33 @@
+
+import { Metadata } from "next";
+export const metadata: Metadata = {
+  title: "Mis Favoritos | ITELSA Go",
+  description: "Guardá y gestioná tus propiedades favoritas en ITELSA Go. Accedé rápido a los inmuebles que más te interesan y no pierdas ninguna oportunidad.",
+  openGraph: {
+    title: "Mis Favoritos | ITELSA Go",
+    description: "Guardá y gestioná tus propiedades favoritas en ITELSA Go. Accedé rápido a los inmuebles que más te interesan y no pierdas ninguna oportunidad.",
+    url: "https://itelsa-go.com/favoritos",
+    siteName: "ITELSA Go",
+    images: [
+      {
+        url: "/logo-itelsa-go.svg",
+        width: 600,
+        height: 315,
+        alt: "ITELSA Go logo"
+      }
+    ],
+    locale: "es_AR",
+    type: "website"
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Mis Favoritos | ITELSA Go",
+    description: "Guardá y gestioná tus propiedades favoritas en ITELSA Go. Accedé rápido a los inmuebles que más te interesan y no pierdas ninguna oportunidad.",
+    images: ["/logo-itelsa-go.svg"],
+    site: "@ItelsaGo"
+  }
+};
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -17,7 +47,7 @@ type Item = {
   currency: "ARS" | "USD";
   images: string[];
   rooms?: number;
-  propertyType?: string;
+  propertyType?: "depto" | "casa" | "lote" | "local";
   agency?: { logo?: string; plan?: "premium" | "pro" | "free"; whatsapp?: string };
   createdAt?: string;
 };

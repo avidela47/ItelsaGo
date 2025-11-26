@@ -1,3 +1,6 @@
+
+
+
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -150,7 +153,11 @@ export default function InmueblesPage() {
         filters.bathrooms === "all" ? true : bathrooms !== undefined && bathrooms >= Number(filters.bathrooms);
 
       const matchGarage =
-        filters.garage === "all" ? true : filters.garage === "true" ? it.garage === true : it.garage !== true;
+        filters.garage === "all"
+          ? true
+          : filters.garage === true
+            ? it.garage === true
+            : it.garage !== true;
 
       const p = Number(it.price || 0);
       const matchPrice = p >= filters.price[0] && p <= filters.price[1];
@@ -191,6 +198,25 @@ export default function InmueblesPage() {
     return out;
   }, [itemsAll, filters]);
 
+  // Structured data JSON-LD para SEO (ItemList)
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    "name": "Listado de propiedades",
+    "description": "Propiedades en venta y alquiler en Argentina. Filtrá por ubicación, precio, tipo y más.",
+    "url": typeof window !== "undefined" ? window.location.href : "https://itelsa-go.com/inmuebles",
+    "numberOfItems": list.length,
+    "itemListElement": list.slice(0, 20).map((it, idx) => ({
+      "@type": "ListItem",
+      "position": idx + 1,
+      "url": `/inmuebles/${it._id}`,
+      "name": it.title,
+      ...(it.images?.[0] && { "image": it.images[0] }),
+      ...(it.price && { "price": it.price, "priceCurrency": it.currency }),
+      ...(it.location && { "address": it.location })
+    }))
+  };
+
   return (
     <main
       style={{
@@ -199,6 +225,11 @@ export default function InmueblesPage() {
         margin: "0 auto",
       }}
     >
+      {/* JSON-LD para Google (ItemList) */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
 
       {/* FILTROS */}
 
