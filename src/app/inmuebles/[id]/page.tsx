@@ -31,7 +31,7 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import EmailIcon from "@mui/icons-material/Email";
 import PropertyCard from "@/components/cards/PropertyCard";
 import AgencyContact from "@/components/AgencyContact";
-import ImageLightbox from "@/components/ImageLightbox";
+const ImageLightbox = dynamic(() => import("@/components/ImageLightbox"), { ssr: false });
 
 // Importar MapView dinámicamente para evitar SSR
 const MapView = dynamic(() => import("@/components/maps/MapView"), {

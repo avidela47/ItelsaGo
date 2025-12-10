@@ -8,15 +8,15 @@ import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
 
-import FiltersBar, {
-  FilterState,
-  SortKey,
-  Plan,
-  PropertyType,
-} from "@/components/FiltersBar";
-import PropertyCard from "@/components/cards/PropertyCard";
-import PlanesSection from "@/components/PlanesSection";
-import SkeletonCard from "@/components/SkeletonCard";
+import dynamic from "next/dynamic";
+const PropertyCard = dynamic(() => import("@/components/cards/PropertyCard"), { ssr: false, loading: () => <div>Cargando propiedad...</div> });
+const PlanesSection = dynamic(() => import("@/components/PlanesSection"), { ssr: false, loading: () => <div>Cargando planes...</div> });
+const SkeletonCard = dynamic(() => import("@/components/SkeletonCard"), { ssr: false, loading: () => <div>Cargando...</div> });
+const FiltersBar = dynamic(() => import("@/components/FiltersBar"), { ssr: false, loading: () => <div>Cargando filtros...</div> });
+type FilterState = any;
+type SortKey = any;
+type Plan = any;
+type PropertyType = any;
 
 type Item = {
   _id: string;
