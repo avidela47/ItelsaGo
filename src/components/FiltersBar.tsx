@@ -137,6 +137,8 @@ export default function FiltersBar({ value, onChange, items, onPlanesClick }: Pr
 
   return (
     <Box
+      role="search"
+      aria-label="Barra de filtros de búsqueda de propiedades"
       sx={{
         display: "grid",
         gap: 1.5,
@@ -161,6 +163,7 @@ export default function FiltersBar({ value, onChange, items, onPlanesClick }: Pr
         '& .MuiChip-outlined': { borderColor: 'rgba(255,255,255,0.25)' },
       }}
     >
+      {/* Focus visible styles movidos a globals.css para accesibilidad unificada */}
       {/* BÚSQUEDA */}
       <TextField
         placeholder="Buscar por título o ubicación…"
@@ -168,6 +171,7 @@ export default function FiltersBar({ value, onChange, items, onPlanesClick }: Pr
         onChange={(e) => set("q", e.target.value)}
         size="medium"
         fullWidth
+        aria-label="Buscar propiedades por título o ubicación"
         InputProps={{
           startAdornment: (
             <InputAdornment position="start">

@@ -56,6 +56,7 @@ export default function Navbar() {
 
   return (
     <header
+      role="banner"
       style={{
         width: "100%",
         padding: "12px 32px",
@@ -63,21 +64,34 @@ export default function Navbar() {
         alignItems: "center",
         justifyContent: "space-between",
         background: "transparent",
+        // Focus visible para todos los links y botones del navbar
+        // (esto se aplica a los hijos directos)
+        // Si usas styled-components o CSS modules, mover a CSS global
       }}
     >
+      {/* Focus visible styles movidos a globals.css para evitar hydration error */}
       {/* LOGO */}
-      <Link href="/inmuebles" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      <Link
+        href="/inmuebles"
+        style={{ display: "flex", alignItems: "center", gap: 8 }}
+        aria-label="Ir a la página principal de inmuebles"
+      >
         <Image
           src="/logo-itelsa-go.svg"
           alt="Logo ITELSA Go, plataforma inmobiliaria"
           width={140}
           height={40}
           priority
+          aria-label="Logo de ITELSA Go, plataforma inmobiliaria"
         />
       </Link>
 
       {/* ROLES */}
-      <nav style={{ display: "flex", alignItems: "center", gap: 10 }}>
+      <nav
+        role="navigation"
+        aria-label="Navegación principal"
+        style={{ display: "flex", alignItems: "center", gap: 10 }}
+      >
 
         {!role && (
           <Link

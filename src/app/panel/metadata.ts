@@ -1,6 +1,4 @@
-
-import { Metadata } from "next";
-import PanelHome from "./PanelHome";
+import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Panel de Administración | ITELSA Go",
@@ -29,8 +27,3 @@ export const metadata: Metadata = {
     site: "@ItelsaGo"
   }
 };
-
-export default function Page() {
-  return <PanelHome />;
-}
-
